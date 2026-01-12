@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sentinel - Dashboard (Recreated)</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/dashboard_recreated.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+
+<div class="sidebar left-col">
+  <div class="logo-box">
+    <img src="../img/Dashboard-logo.png" class="sidebar-logo" alt="Sentinel">
+    <a href="login.html" class="sidebar-link">Logout / Back to Login</a>
+  </div>
+
+  <div class="user-box">
+    <p class="user-label">USER</p>
+    <div class="user-info">
+      <i class="fa-solid fa-user-circle user-icon"></i>
+      <div>
+        <p class="user-name">ADMIN</p>
+        <p class="online">Online</p>
+      </div>
+    </div>
+  </div>
+
+  <ul class="menu">
+    <li class="active"><a href="dashboard_recreated.html"><i class="fa-solid fa-table-columns"></i> Dashboard</a></li>
+    <li><a href="incireport.html"><i class="fa-solid fa-clipboard-list"></i> Incident Reports</a></li>
+    <li><a href="analytics.html"><i class="fa-solid fa-chart-simple"></i> Analytics</a></li>
+    <li><a href="#"><i class="fa-solid fa-gear"></i> Settings</a></li>
+  </ul>
+
+  <div class="signout">
+    <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+  </div>
+</div>
+
+<div class="main right-col">
+  <div class="topbar">
+    <div class="search-box">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="text" placeholder="Search">
+    </div>
+    <div class="top-right">
+      <p>ADMIN</p>
+      <i class="fa-solid fa-user-circle top-user"></i>
+    </div>
+  </div>
+
+  <div class="page-header">
+    <h1 class="page-title">Analytics</h1>
+    <p class="page-sub">As of <span id="as-of-time" aria-live="polite">10:59:00 PM</span> <i class="fa-solid fa-rotate-right refresh"></i></p>
+  </div>
+
+  <div class="cards-row">
+    <div class="card wide-card">
+      <h3>Event Trends</h3>
+      <canvas id="trendsChart"></canvas>
+    </div>
+
+    <div class="card map-card">
+      <h3>Interactive Map with Heat Zones</h3>
+      <div id="map" style="width:100%;height:300px;border-radius:6px;overflow:hidden"></div>
+    </div>
+  </div>
+
+  <div class="card full-card">
+    <h3>Tanod Availability &amp; Status List</h3>
+    <table class="status-table">
+      <thead>
+        <tr><th>Name</th><th>Status</th><th>No. of Incident Reported</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Tanod 1</td><td>Available</td><td>3</td></tr>
+        <tr><td>Tanod 2</td><td>On Duty</td><td>5</td></tr>
+        <tr><td>Tanod 3</td><td>Unavailable</td><td>0</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- App script for trends & map -->
+<script src="../js/dashboard_recreated.js"></script>
+</body>
+<script src="../js/asof-clock.js"></script>
+<!-- Google Maps with visualization library (heatmap). Re-using existing API key present in repo. -->
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCk1YpkJBfimFaX5sPjqSPjpCd8iDeA7ro&libraries=visualization&callback=initRecreatedMap"></script>
+</body>
+</html>

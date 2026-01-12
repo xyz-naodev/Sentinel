@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentinel - Incident Reports</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/dashboard.css">
+    <link rel="stylesheet" href="../css/incireport.css">
+    <link rel="stylesheet" href="../css/loading.css">
+    <link rel="stylesheet" href="../css/notification.css">
+    <link rel="stylesheet" href="../css/search.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <!-- Firebase SDK -->
+    <script defer src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js"></script>
+
+    <!-- Firebase Web Service & Auth -->
+    <script defer src="../js/firebase-web-service.js"></script>
+    <script defer src="../js/firebase-auth-service.js"></script>
+    <script defer src="../js/page-auth-guard.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database.js"></script>
+</head>
+<body>
+
+<div class="dashboard-container">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <img src="../img/Dashboard-logo.png" alt="Sentinel Logo" class="sidebar-logo-img">
+        </div>
+
+        <div class="sidebar-user">
+            <div class="user-avatar">
+                <i class="fa-solid fa-user"></i>
+            </div>
+            <div class="user-info">
+                <h4>ADMIN</h4>
+                <p>Online</p>
+            </div>
+        </div>
+
+        <ul class="sidebar-nav">
+            <li><a href="dashboard.html"><i class="fa-solid fa-table-columns"></i> Dashboard</a></li>
+            <li><a href="incireport.html" class="active"><i class="fa-solid fa-clipboard-list"></i> Incident Reports</a></li>
+            <li><a href="analytics.html"><i class="fa-solid fa-chart-simple"></i> Analytics</a></li>
+            <li><a href="settings.html"><i class="fa-solid fa-gear"></i> Settings</a></li>
+        </ul>
+
+        <div class="sidebar-logout">
+            <button id="logoutBtn" class="btn btn-secondary">
+                <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+            </button>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="top-bar">
+            <div class="top-bar-left">
+                <div style="position: relative; width: 100%;">
+                    <input type="text" class="top-bar-search" placeholder="Search incidents...">
+                    <div id="searchResults" style="position: absolute; top: 100%; left: 0; width: 100%; max-width: 400px; z-index: 1001;"></div>
+                </div>
+            </div>
+            <div class="top-bar-right">
+                <div style="position: relative; display: inline-block;">
+                    <i class="top-bar-icon fa-solid fa-bell" id="notificationBell" style="cursor: pointer; font-size: 18px; transition: transform 0.2s;" title="Notifications"></i>
+                    <span id="notificationBadge" style="position: absolute; top: -8px; right: -8px; background: #B00020; color: white; border-radius: 50%; width: 24px; height: 24px; display: none; align-items: center; justify-content: center; font-size: 12px; font-weight: 600;"></span>
+                    
+                    <!-- Notification Panel -->
+                    <div id="notificationPanel" style="position: absolute; top: 40px; right: 0; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); width: 380px; max-height: 500px; display: none; z-index: 1000; flex-direction: column; overflow: hidden; pointer-events: none;">
+                        <div style="padding: 14px 16px; border-bottom: 1px solid #eee; background: #f9f9f9; display: flex; justify-content: space-between; align-items: center;">
+                            <h3 style="margin: 0; font-size: 15px; color: #333; font-weight: 600;">Notifications</h3>
+                            <button id="clearAllNotifications" style="background: none; border: none; color: #999; cursor: pointer; font-size: 13px; padding: 4px 8px; transition: color 0.2s;" title="Clear all">Clear All</button>
+                        </div>
+                        <div id="notificationPanelContent" style="overflow-y: auto; flex: 1;">
+                            <div style="padding: 20px; text-align: center; color: #999;">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <i class="top-bar-icon fa-solid fa-circle-info" id="filterInfoIcon" style="cursor: pointer;"></i>
+                <div class="admin-section">
+                    <span>ADMIN</span>
+                    <div class="admin-avatar">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="page-content">
+            <div class="page-header">
+                <h1>Incident Reports</h1>
+                <p class="page-timestamp">As of <span id="as-of-time">10:59 PM</span> <i class="fa-solid fa-rotate-right"></i></p>
+            </div>
+
+            <div class="card">
+                <!-- Filtering and Sorting Controls -->
+                <div style="display: flex; gap: 12px; margin-bottom: 20px; align-items: center; flex-wrap: wrap;">
+                    <label style="font-weight: 600; font-size: 14px;">Filter By Date:</label>
+                    <input type="date" id="filterDateFrom" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                    <span style="font-size: 12px; color: #666;">to</span>
+                    <input type="date" id="filterDateTo" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                    <span style="margin-left: 20px; width: 1px; height: 24px; background: #ddd;"></span>
+                    <label style="font-weight: 600; font-size: 14px; margin-left: 20px;">Sort By:</label>
+                    <select id="sortBy" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; background: white; cursor: pointer;">
+                        <option value="timestamp">Timestamp (Newest First)</option>
+                        <option value="timestamp-asc">Timestamp (Oldest First)</option>
+                        <option value="severity">Severity (High to Low)</option>
+                        <option value="severity-asc">Severity (Low to High)</option>
+                        <option value="type">Type (A-Z)</option>
+                        <option value="status">Status</option>
+                    </select>
+                </div>
+
+                <div id="incidentTableContainer">
+                    <div class="loading-spinner" style="text-align: center; padding: 40px;">
+                        <i class="fa-solid fa-spinner fa-spin" style="font-size: 24px; color: #FF6B00;"></i>
+                        <p style="margin-top: 10px; color: #666;">Loading incidents...</p>
+                    </div>
+                </div>
+
+                <!-- Bulk Actions Panel - Static, visibility managed by JS -->
+                <div id="bulkActionsPanel" style="display: none; margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; border-left: 4px solid #FF6B00; flex-wrap: wrap; gap: 15px;">
+                    <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 300px;">
+                        <label style="font-weight: 600; color: #333;">Change Status To:</label>
+                        <select id="bulkStatusSelect" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; background: white; cursor: pointer;">
+                            <option value="">-- Select Status --</option>
+                            <option value="pending">Pending</option>
+                            <option value="in progress">In Progress</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="closed">Closed</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="bulkUpdateBtn" onclick="bulkUpdateStatus()" style="padding: 10px 20px; background: #FF6B00; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px; transition: background 0.3s;">
+                            <i class="fa-solid fa-check" style="margin-right: 5px;"></i>Update Status
+                        </button>
+                        <button id="bulkDeleteBtn" onclick="bulkDeleteIncidents()" style="padding: 10px 20px; background: #e74c3c; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px; transition: background 0.3s;">
+                            <i class="fa-solid fa-trash" style="margin-right: 5px;"></i>Delete Selected
+                        </button>
+                    </div>
+                    <div style="flex: 1; text-align: right; min-width: 200px;">
+                        <span id="selectedCountDisplay" style="font-weight: 600; color: #666; font-size: 14px;">0 incidents selected</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="../js/utils.js"></script>
+
+<!-- ACCESSIBILITY ENHANCEMENTS (ARIA labels, keyboard nav, color contrast) -->
+<script src="../js/accessibility-enhancements.js"></script>
+
+<!-- NOTIFICATION MANAGER -->
+<script src="../js/notification-manager.js"></script>
+
+<!-- NOTIFICATION SYSTEM -->
+<script src="../js/notification-system.js"></script>
+<script src="../js/asof-clock.js"></script>
+<script src="../js/incident-id-generator.js"></script>
+
+<!-- Search Service -->
+<script src="../js/search-service.js"></script>
+
+<!-- Firebase Web Service Integration -->
+<script src="../js/firebase-web-service.js"></script>
+
+<!-- Initialize Notification Manager with Firebase -->
+<script>
+  // Hook notification manager to Firebase incidents
+  if (typeof firebaseService !== 'undefined' && window.notificationManager) {
+    // Listen to incidents updates
+    firebaseService.onIncidentsChange((incidents) => {
+      if (incidents && incidents.length > 0) {
+        window.notificationManager.checkForNewIncidents(incidents);
+      }
+    });
+    
+    // Initial load
+    if (firebaseService.incidents && firebaseService.incidents.length > 0) {
+      window.notificationManager.checkForNewIncidents(firebaseService.incidents);
+    }
+  }
+</script>
+
+<!-- Incident Reports page with Firebase integration -->
+<script>
+  // Global incidents array - explicitly set on window for accessibility
+  window.allIncidents = [];
+  let currentSortBy = 'timestamp'; // Default sort
+  let dateFilters = {
+    from: '',
+    to: ''
+  };
+  let selectedIncidentIds = new Set(); // Track selected incidents across renders
+
+  /**
+   * Get selected incident IDs from checkboxes
+   */
+  function getSelectedIncidents() {
+    const selected = [];
+    selectedIncidentIds.forEach(incidentId => {
+      const row = document.querySelector(`[data-incident-id="${incidentId}"]`);
+      if (row) {
+        selected.push({
+          id: incidentId,
+          firebaseKey: row.dataset.firebaseKey
+        });
+      }
+    });
+    return selected;
+  }
+
+  /**
+   * Update selected count display
+   */
+  function updateSelectedCount() {
+    const selected = getSelectedIncidents().length;
+    const countDisplay = document.getElementById('selectedCountDisplay');
+    if (countDisplay) {
+      countDisplay.textContent = `${selected} incident${selected !== 1 ? 's' : ''} selected`;
+    }
+    
+    // Show/hide bulk actions panel
+    const bulkPanel = document.getElementById('bulkActionsPanel');
+    if (bulkPanel) {
+      if (selected > 0) {
+        bulkPanel.style.display = 'flex';
+      } else {
+        bulkPanel.style.display = 'none';
+      }
+    }
+  }
+
+  /**
+   * Bulk update status of selected incidents
+   */
+  function bulkUpdateStatus(newStatus) {
+    // If no status provided, get from select element
+    if (!newStatus) {
+      const statusSelect = document.getElementById('bulkStatusSelect');
+      if (!statusSelect || !statusSelect.value) {
+        alert('Please select a status');
+        return;
+      }
+      newStatus = statusSelect.value;
+    }
+
+    const selected = getSelectedIncidents();
+    if (selected.length === 0) {
+      alert('Please select incidents first');
+      return;
+    }
+
+    const confirmed = confirm(`Update status to "${newStatus}" for ${selected.length} incident(s)?`);
+    if (!confirmed) return;
+
+    // Update in Firebase
+    const dbURL = 'https://sentinel-tanod-system-default-rtdb.asia-southeast1.firebasedatabase.app/incidents';
+    
+    let updateCount = 0;
+    let errorCount = 0;
+
+    selected.forEach(incident => {
+      const firebaseKey = incident.firebaseKey;
+      // Normalize status to lowercase for consistent storage
+      const normalizedStatus = newStatus.toLowerCase();
+      fetch(`${dbURL}/${firebaseKey}.json`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: normalizedStatus,
+          updatedAt: new Date().toISOString()
+        })
+      })
+      .then(response => {
+        if (response.ok) {
+          updateCount++;
+        } else {
+          errorCount++;
+        }
+        if (updateCount + errorCount === selected.length) {
+          if (window.toast) {
+            if (errorCount === 0) {
+              window.toast.success('Status Updated', `${updateCount} incident(s) updated successfully`);
+            } else {
+              window.toast.warning('Partial Update', `${updateCount} updated, ${errorCount} failed`);
+            }
+          }
+          // Clear selections, reset status select, and refresh
+          selectedIncidentIds.clear();
+          const statusSelect = document.getElementById('bulkStatusSelect');
+          if (statusSelect) {
+            statusSelect.value = '';
+          }
+          updateSelectedCount();
+          renderIncidentsTable();
+        }
+      })
+      .catch(error => {
+        errorCount++;
+        console.error('[BulkAction] Error updating incident:', error);
+        if (updateCount + errorCount === selected.length) {
+          if (window.toast) {
+            window.toast.error('Update Failed', `${errorCount} incident(s) failed to update`);
+          }
+        }
+      });
+    });
+  }
+
+  /**
+   * Bulk delete selected incidents
+   */
+  function bulkDeleteIncidents() {
+    const selected = getSelectedIncidents();
+    if (selected.length === 0) {
+      alert('Please select incidents first');
+      return;
+    }
+
+    const confirmed = confirm(`Delete ${selected.length} incident(s) permanently? This cannot be undone.`);
+    if (!confirmed) return;
+
+    const dbURL = 'https://sentinel-tanod-system-default-rtdb.asia-southeast1.firebasedatabase.app/incidents';
+    
+    let deleteCount = 0;
+    let errorCount = 0;
+
+    selected.forEach(incident => {
+      const firebaseKey = incident.firebaseKey;
+      fetch(`${dbURL}/${firebaseKey}.json`, {
+        method: 'DELETE'
+      })
+      .then(response => {
+        if (response.ok) {
+          deleteCount++;
+        } else {
+          errorCount++;
+        }
+        if (deleteCount + errorCount === selected.length) {
+          if (window.toast) {
+            if (errorCount === 0) {
+              window.toast.success('Deleted', `${deleteCount} incident(s) deleted successfully`);
+            } else {
+              window.toast.warning('Partial Delete', `${deleteCount} deleted, ${errorCount} failed`);
+            }
+          }
+          // Clear selections and refresh
+          selectedIncidentIds.clear();
+          updateSelectedCount();
+          renderIncidentsTable();
+        }
+      })
+      .catch(error => {
+        errorCount++;
+        console.error('[BulkAction] Error deleting incident:', error);
+        if (deleteCount + errorCount === selected.length) {
+          if (window.toast) {
+            window.toast.error('Delete Failed', `${errorCount} incident(s) failed to delete`);
+          }
+        }
+      });
+    });
+  }
+
+  /**
+   * Filter incidents by date range
+   */
+  function filterIncidentsByDate(incidents) {
+    if (!dateFilters.from && !dateFilters.to) {
+      return incidents;
+    }
+
+    return incidents.filter(incident => {
+      const incidentDate = new Date(incident.timestamp || incident.createdAt || 0);
+      
+      if (dateFilters.from) {
+        const fromDate = new Date(dateFilters.from);
+        fromDate.setHours(0, 0, 0, 0);
+        if (incidentDate < fromDate) return false;
+      }
+      
+      if (dateFilters.to) {
+        const toDate = new Date(dateFilters.to);
+        toDate.setHours(23, 59, 59, 999);
+        if (incidentDate > toDate) return false;
+      }
+      
+      return true;
+    });
+  }
+
+  /**
+   * Sort incidents based on current sort setting
+   */
+  function sortIncidents(incidents, sortBy) {
+    const sorted = [...incidents]; // Create a copy to avoid mutating original
+    
+    switch (sortBy) {
+      case 'timestamp-asc':
+        // Oldest first
+        sorted.sort((a, b) => {
+          const aTime = new Date(a.timestamp || a.createdAt || 0).getTime();
+          const bTime = new Date(b.timestamp || b.createdAt || 0).getTime();
+          return aTime - bTime;
+        });
+        break;
+      
+      case 'severity':
+        // High to Low (CRITICAL > HIGH > MEDIUM > LOW > CLEAR)
+        const severityOrder = { 'CRITICAL': 0, 'HIGH': 1, 'MEDIUM': 2, 'LOW': 3, 'CLEAR': 4 };
+        sorted.sort((a, b) => {
+          const aLevel = severityOrder[a.severity] ?? 5;
+          const bLevel = severityOrder[b.severity] ?? 5;
+          if (aLevel !== bLevel) return aLevel - bLevel;
+          // If same severity, sort by timestamp (newest first)
+          const aTime = new Date(a.timestamp || a.createdAt || 0).getTime();
+          const bTime = new Date(b.timestamp || b.createdAt || 0).getTime();
+          return bTime - aTime;
+        });
+        break;
+      
+      case 'severity-asc':
+        // Low to High (CLEAR > LOW > MEDIUM > HIGH > CRITICAL)
+        const severityOrderAsc = { 'CLEAR': 0, 'LOW': 1, 'MEDIUM': 2, 'HIGH': 3, 'CRITICAL': 4 };
+        sorted.sort((a, b) => {
+          const aLevel = severityOrderAsc[a.severity] ?? 5;
+          const bLevel = severityOrderAsc[b.severity] ?? 5;
+          if (aLevel !== bLevel) return aLevel - bLevel;
+          // If same severity, sort by timestamp (newest first)
+          const aTime = new Date(a.timestamp || a.createdAt || 0).getTime();
+          const bTime = new Date(b.timestamp || b.createdAt || 0).getTime();
+          return bTime - aTime;
+        });
+        break;
+      
+      case 'type':
+        // Alphabetical A-Z
+        sorted.sort((a, b) => {
+          const aType = (a.type || '').toLowerCase();
+          const bType = (b.type || '').toLowerCase();
+          return aType.localeCompare(bType);
+        });
+        break;
+      
+      case 'status':
+        // Sort by status
+        const statusOrder = { 'new': 0, 'acknowledged': 1, 'in_progress': 2, 'resolved': 3 };
+        sorted.sort((a, b) => {
+          const aStatus = statusOrder[a.status] ?? 4;
+          const bStatus = statusOrder[b.status] ?? 4;
+          if (aStatus !== bStatus) return aStatus - bStatus;
+          // If same status, sort by timestamp (newest first)
+          const aTime = new Date(a.timestamp || a.createdAt || 0).getTime();
+          const bTime = new Date(b.timestamp || b.createdAt || 0).getTime();
+          return bTime - aTime;
+        });
+        break;
+      
+      case 'timestamp':
+      default:
+        // Newest first (default)
+        sorted.sort((a, b) => {
+          const aTime = new Date(a.timestamp || a.createdAt || 0).getTime();
+          const bTime = new Date(b.timestamp || b.createdAt || 0).getTime();
+          return bTime - aTime;
+        });
+        break;
+    }
+    
+    return sorted;
+  }
+
+  /**
+   * Render incidents table
+   */
+  function renderIncidentsTable() {
+    const container = document.getElementById('incidentTableContainer');
+    
+    if (!window.allIncidents || window.allIncidents.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; color: #999; padding: 40px;">
+          <i class="fa-solid fa-inbox" style="font-size: 32px; margin-bottom: 10px; display: block; color: #ddd;"></i>
+          <p>No incidents reported yet</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Filter by date and sort incidents
+    const filteredIncidents = filterIncidentsByDate(window.allIncidents);
+    const sortedIncidents = sortIncidents(filteredIncidents, currentSortBy);
+
+    // Build table HTML (WITHOUT bulk actions - that's handled separately)
+    let html = `
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead style="background: #f5f5f5;">
+          <tr>
+            <th style="padding: 12px; text-align: center; border-bottom: 2px solid #ddd; font-weight: 600; width: 40px;"></th>
+            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd; font-weight: 600;">Incident ID</th>
+            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd; font-weight: 600;">Type</th>
+            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd; font-weight: 600;">Severity</th>
+            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd; font-weight: 600;">Location</th>
+            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd; font-weight: 600;">Status</th>
+            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd; font-weight: 600;">Timestamp</th>
+            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd; font-weight: 600;">Description</th>
+          </tr>
+        </thead>
+        <tbody id="incidentTableBody">
+    `;
+
+    // Add incident rows
+    sortedIncidents.forEach((incident) => {
+      const time = new Date(incident.timestamp || incident.createdAt || 0);
+      const timeStr = time.toLocaleTimeString();
+      const dateStr = time.toLocaleDateString();
+      
+      // Determine severity class and color
+      let severityClass = 'severity-low';
+      const severityValue = (incident.severity || 'LOW').toUpperCase();
+      if (severityValue === 'HIGH' || severityValue === 'CRITICAL') {
+        severityClass = 'severity-high';
+      } else if (severityValue === 'MEDIUM') {
+        severityClass = 'severity-medium';
+      } else if (severityValue === 'CLEAR') {
+        severityClass = 'severity-clear';
+      }
+
+      // Determine status class
+      let statusClass = 'status-pending';
+      const statusLower = (incident.status || '').toLowerCase().trim();
+      if (statusLower === 'resolved') statusClass = 'status-resolved';
+      else if (statusLower === 'investigating' || statusLower === 'in_progress' || statusLower === 'in progress') statusClass = 'status-investigating';
+      else if (statusLower === 'closed') statusClass = 'status-closed';
+
+      // Determine type class and icon
+      let typeClass = 'type-other';
+      let typeIcon = '📋';
+      const typeValue = (incident.type || '').toLowerCase();
+      if (typeValue.includes('theft')) {
+        typeClass = 'type-theft';
+        typeIcon = '🚨';
+      } else if (typeValue.includes('disturbance')) {
+        typeClass = 'type-disturbance';
+        typeIcon = '📢';
+      } else if (typeValue.includes('robbery')) {
+        typeClass = 'type-robbery';
+        typeIcon = '⚠️';
+      } else if (typeValue.includes('vandalism')) {
+        typeClass = 'type-vandalism';
+        typeIcon = '🔨';
+      } else if (typeValue.includes('assault')) {
+        typeClass = 'type-assault';
+        typeIcon = '✊';
+      } else if (typeValue.includes('property')) {
+        typeClass = 'type-property-damage';
+        typeIcon = '🏠';
+      } else if (typeValue.includes('dispute')) {
+        typeClass = 'type-dispute';
+        typeIcon = '🗣️';
+      } else if (typeValue.includes('accident')) {
+        typeClass = 'type-accident';
+        typeIcon = '🚗';
+      }
+
+      const location = `${(incident.latitude || 0).toFixed(4)}°, ${(incident.longitude || 0).toFixed(4)}°`;
+      const description = (incident.description || '').substring(0, 50) + (incident.description?.length > 50 ? '...' : '');
+
+      // Determine row class for left border coloring
+      let rowClass = `status-pending-row severity-${severityValue.toLowerCase().substring(0, 1).toLowerCase() === 'h' ? 'high' : severityValue.toLowerCase().substring(0, 1).toLowerCase() === 'm' ? 'medium' : 'low'}-row`;
+      if (statusClass === 'status-resolved') rowClass = 'status-resolved-row';
+      else if (statusClass === 'status-investigating') rowClass = 'status-investigating-row';
+      else if (statusClass === 'status-closed') rowClass = 'status-closed-row';
+
+      html += `
+        <tr class="${rowClass}" style="border-bottom: 1px solid #eee;" data-incident-id="${incident.id}" data-firebase-key="${incident.firebaseKey || incident.id}">
+          <td style="padding: 12px; text-align: center;">
+            <input type="checkbox" class="incident-checkbox" value="${incident.id}" ${selectedIncidentIds.has(incident.id) ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;">
+          </td>
+          <td style="padding: 12px; font-family: monospace; font-size: 12px; color: #666;">${incident.id || 'N/A'}</td>
+          <td style="padding: 12px; font-weight: 500;">${typeIcon} ${incident.type || 'Unknown'}</td>
+          <td style="padding: 12px;">
+            <span class="severity-badge ${severityClass}">
+              ${severityValue}
+            </span>
+          </td>
+          <td style="padding: 12px; font-size: 12px;">
+            <a href="dashboard.html" class="location-link" data-incident-id="${incident.id}" style="color: #2196F3; cursor: pointer; text-decoration: none; font-weight: 500; transition: color 0.2s;">
+              ${location}
+            </a>
+          </td>
+          <td style="padding: 12px;">
+            <span class="status-badge ${statusClass}">
+              ${incident.status || 'pending'}
+            </span>
+          </td>
+          <td style="padding: 12px; font-size: 12px; color: #999; white-space: nowrap;">${dateStr} ${timeStr}</td>
+          <td style="padding: 12px; font-size: 12px; color: #666; max-width: 250px;">${description}</td>
+        </tr>
+      `;
+    });
+
+    html += `
+        </tbody>
+      </table>
+    `;
+
+    container.innerHTML = html;
+
+    // Add click handlers for location links
+    container.querySelectorAll('.location-link').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const incidentId = link.getAttribute('data-incident-id');
+        console.log('[IncidentReports] Location clicked for incident:', incidentId);
+        
+        // Store incident ID to open after dashboard loads
+        sessionStorage.setItem('openIncidentId', incidentId);
+        
+        // Navigate to dashboard
+        window.location.href = 'dashboard.html';
+      });
+    });
+  }
+
+  /**
+   * Load incidents directly from REST API (fallback)
+   */
+  function fetchIncidentsFromREST() {
+    console.log('[IncidentReports] Fetching incidents from REST API...');
+    
+    const dbURL = 'https://sentinel-tanod-system-default-rtdb.asia-southeast1.firebasedatabase.app/incidents.json';
+    
+    fetch(dbURL)
+      .then(response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      })
+      .then(data => {
+        console.log('[IncidentReports] ✅ REST fetch successful, data received');
+        
+        if (data && typeof data === 'object') {
+          window.allIncidents = [];
+          Object.keys(data).forEach((key) => {
+            window.allIncidents.push({
+              id: key,
+              ...data[key],
+            });
+          });
+          
+          // Normalize and sort by timestamp (newest first)
+          const parseTime = (val) => {
+            if (!val && val !== 0) return 0;
+            if (typeof val === 'number') {
+              if (val < 1e11) return val * 1000;
+              return val;
+            }
+            if (typeof val === 'string') {
+              const asNum = Number(val);
+              if (!Number.isNaN(asNum)) {
+                if (asNum < 1e11) return asNum * 1000;
+                return asNum;
+              }
+              const parsed = Date.parse(val);
+              return Number.isNaN(parsed) ? 0 : parsed;
+            }
+            return 0;
+          };
+
+          window.allIncidents.sort((a, b) => {
+            const aTime = parseTime(a.createdAt || a.timestamp || 0);
+            const bTime = parseTime(b.createdAt || b.timestamp || 0);
+            return bTime - aTime;
+          });
+
+          // Apply sequential incident IDs
+          if (typeof incidentIDGenerator !== 'undefined') {
+            window.allIncidents = incidentIDGenerator.processIncidents(window.allIncidents, 'id');
+            console.log('[IncidentReports] Applied sequential IDs to', window.allIncidents.length, 'incidents');
+          }
+
+          console.log('[IncidentReports] ✅ Loaded', window.allIncidents.length, 'incidents');
+          renderIncidentsTable();
+          
+          // Poll for updates every 2 seconds
+          setInterval(fetchIncidentsFromREST, 2000);
+        }
+      })
+      .catch(error => {
+        console.error('[IncidentReports] REST fetch error:', error);
+        setTimeout(fetchIncidentsFromREST, 2000);
+      });
+  }
+
+  /**
+   * Load incidents from Firebase
+   */
+  function loadIncidents() {
+    console.log('[IncidentReports] Checking Firebase service status...');
+    
+    // Try Firebase service if available and initialized
+    if (typeof firebaseService !== 'undefined' && firebaseService && firebaseService.initialized) {
+      console.log('[IncidentReports] Using Firebase service - incidents count:', firebaseService.incidents?.length || 0);
+      window.allIncidents = firebaseService.incidents || [];
+      
+      // Check for new incidents and update notification manager
+      if (typeof window.notificationManager !== 'undefined' && window.notificationManager) {
+        window.notificationManager.checkForNewIncidents(window.allIncidents);
+      }
+      
+      renderIncidentsTable();
+      
+      // Update search service with incidents
+      if (typeof searchService !== 'undefined' && searchService.setIncidents) {
+        searchService.setIncidents(window.allIncidents);
+        console.log('[IncidentReports] ✅ Updated searchService with', window.allIncidents.length, 'incidents');
+      }
+      
+      // Set up listener for updates
+      firebaseService.onIncidentsChange((incidents) => {
+        console.log('[IncidentReports] Incidents updated:', incidents.length);
+        window.allIncidents = incidents;
+        
+        // Check for new incidents and update notification manager
+        if (typeof window.notificationManager !== 'undefined' && window.notificationManager) {
+          window.notificationManager.checkForNewIncidents(incidents);
+        }
+        
+        renderIncidentsTable();
+        
+        // Update search service when incidents change
+        if (typeof searchService !== 'undefined' && searchService.setIncidents) {
+          searchService.setIncidents(incidents);
+          console.log('[IncidentReports] ✅ Updated searchService with', incidents.length, 'incidents');
+        }
+      });
+    } else {
+      console.log('[IncidentReports] Firebase service not ready, using REST fallback...');
+      fetchIncidentsFromREST();
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    try {
+      Logger.info('Incident Reports page initialization started');
+
+      // Load incidents from Firebase
+      loadIncidents();
+
+      // Setup sort selector
+      const sortBy = document.getElementById('sortBy');
+      if (sortBy) {
+        sortBy.addEventListener('change', (e) => {
+          currentSortBy = e.target.value;
+          console.log('[IncidentReports] Sort changed to:', currentSortBy);
+          renderIncidentsTable();
+        });
+      }
+
+      // Setup date filters
+      const filterDateFrom = document.getElementById('filterDateFrom');
+      const filterDateTo = document.getElementById('filterDateTo');
+      
+      if (filterDateFrom) {
+        filterDateFrom.addEventListener('change', (e) => {
+          dateFilters.from = e.target.value;
+          console.log('[IncidentReports] Date from filter changed to:', dateFilters.from);
+          renderIncidentsTable();
+        });
+      }
+
+      if (filterDateTo) {
+        filterDateTo.addEventListener('change', (e) => {
+          dateFilters.to = e.target.value;
+          console.log('[IncidentReports] Date to filter changed to:', dateFilters.to);
+          renderIncidentsTable();
+        });
+      }
+
+      // Setup bulk action listeners with event delegation (attach once)
+      
+      // Individual incident checkboxes with event delegation
+      // Using event delegation so it works even when table is re-rendered
+      if (!window.checkboxListenerAttached) {
+        document.addEventListener('change', (e) => {
+          if (e.target.classList.contains('incident-checkbox')) {
+            if (e.target.checked) {
+              selectedIncidentIds.add(e.target.value);
+            } else {
+              selectedIncidentIds.delete(e.target.value);
+            }
+            updateSelectedCount();
+          }
+        });
+        window.checkboxListenerAttached = true;
+      }
+
+      console.log('[IncidentReports] Initialization complete with checkbox delegation');
+
+      // Setup logout functionality
+      const signoutBtn = document.getElementById('logoutBtn');
+      if (signoutBtn) {
+        signoutBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          try {
+            Logger.info('User initiated logout from incident reports');
+            // Clear all authentication data
+            if (typeof StorageHelper !== 'undefined') {
+              StorageHelper.remove('sentinel_logged_in');
+            } else {
+              localStorage.removeItem('sentinel_logged_in');
+              sessionStorage.clear();
+            }
+            // Redirect to login page
+            window.location.href = './login.html';
+          } catch (error) {
+            Logger.error('Logout error', error.message);
+            console.error('Logout failed:', error);
+            // Force redirect to login
+            window.location.href = './login.html';
+          }
+        });
+      } else {
+        Logger.warn('Logout button not found');
+      }
+
+      // Initialize search functionality
+      console.log('[IncidentReports] Setting up search functionality');
+      const searchInput = document.querySelector('.top-bar-search');
+      if (searchInput && typeof searchService !== 'undefined') {
+        searchInput.addEventListener('keyup', (e) => {
+          const query = e.target.value.trim();
+          console.log('[Search] Query:', query);
+          
+          if (query.length === 0) {
+            // Clear results
+            const resultsContainer = document.getElementById('searchResults');
+            if (resultsContainer) {
+              resultsContainer.innerHTML = '';
+            }
+            return;
+          }
+          
+          if (query.length < 2) {
+            // Don't search for single character
+            return;
+          }
+          
+          // Perform debounced search
+          searchService.searchDebounced(query, (results) => {
+            console.log('[Search] Results:', results);
+            const resultsContainer = document.getElementById('searchResults');
+            if (!resultsContainer) {
+              console.warn('[Search] Results container not found');
+              return;
+            }
+            
+            if (results.length === 0) {
+              resultsContainer.innerHTML = '<div class="search-no-results">No incidents found matching your search.</div>';
+              return;
+            }
+            
+            resultsContainer.innerHTML = searchService.formatResults(results);
+            
+            // Add click handlers to results
+            resultsContainer.querySelectorAll('.search-result-item').forEach((item, index) => {
+              item.addEventListener('click', () => {
+                const incident = results[index];
+                console.log('[Search] ===== CLICK HANDLER FIRED =====');
+                console.log('[Search] Clicked result:', incident);
+                
+                // Get the proper sequential ID - use incident.id which should be the sequential ID
+                // incident.originalData.id is the Firebase key which won't match table rows
+                const incidentId = incident.id || incident.sequentialId || incident.originalData?.id;
+                const dataAttributeId = item.getAttribute('data-incident-id');
+                
+                console.log('[Search] Using ID:', incidentId);
+                console.log('[Search] dataAttributeId from HTML:', dataAttributeId);
+                
+                // Log all table rows for debugging
+                const allRows = document.querySelectorAll('[data-incident-id]');
+                console.log('[Search] Total table rows with data-incident-id:', allRows.length);
+                if (allRows.length > 0) {
+                  console.log('[Search] First 5 row IDs:', Array.from(allRows).slice(0, 5).map(r => r.getAttribute('data-incident-id')));
+                }
+                
+                // Try to find the row using the incident ID - must be in tbody to avoid search results
+                const incidentRow = document.querySelector(`tbody tr[data-incident-id="${incidentId}"]`);
+                console.log('[Search] *** incidentRow found:', !!incidentRow);
+                
+                if (incidentRow) {
+                  console.log('[Search] ✅ SUCCESS - Row found, applying highlight!');
+                  
+                  // Log which row we actually found
+                  const rowText = incidentRow.textContent.substring(0, 100);
+                  console.log('[Search] Row content:', rowText);
+                  
+                  // Get row index
+                  const allRows = document.querySelectorAll('tbody tr');
+                  const rowIndex = Array.from(allRows).indexOf(incidentRow);
+                  console.log('[Search] Row index in table:', rowIndex);
+                  
+                  incidentRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  
+                  // Get row dimensions
+                  const rect = incidentRow.getBoundingClientRect();
+                  console.log('[Search] Row dimensions:', rect);
+                  
+                  // Create overlay div
+                  const overlay = document.createElement('div');
+                  overlay.style.position = 'fixed';
+                  overlay.style.top = rect.top + 'px';
+                  overlay.style.left = rect.left + 'px';
+                  overlay.style.width = rect.width + 'px';
+                  overlay.style.height = rect.height + 'px';
+                  overlay.style.backgroundColor = 'transparent';
+                  overlay.style.border = '3px solid #FF0000';
+                  overlay.style.boxShadow = '0 0 20px rgba(255, 0, 0, 0.9)';
+                  overlay.style.zIndex = '9999';
+                  overlay.style.pointerEvents = 'none';
+                  overlay.style.borderRadius = '4px';
+                  
+                  document.body.appendChild(overlay);
+                  console.log('[Search] Created and added highlight overlay');
+                  
+                  // Remove overlay after 2 seconds with fade out
+                  setTimeout(() => {
+                    console.log('[Search] Starting fade out...');
+                    overlay.style.transition = 'opacity 0.5s ease-out';
+                    overlay.style.opacity = '0';
+                    
+                    // Remove from DOM after fade completes
+                    setTimeout(() => {
+                      overlay.remove();
+                      console.log('[Search] Overlay removed after fade');
+                    }, 500);
+                  }, 1500);
+                  
+                } else {
+                  console.log('[Search] ❌ FAILED - Row NOT found');
+                  console.log('[Search] Trying with data attribute ID:', dataAttributeId);
+                  const fallbackRow = document.querySelector(`tbody tr[data-incident-id="${dataAttributeId}"]`);
+                  if (fallbackRow) {
+                    console.log('[Search] ✅ Fallback found!');
+                    fallbackRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    
+                    // Create overlay for fallback row
+                    const rect = fallbackRow.getBoundingClientRect();
+                    const overlay = document.createElement('div');
+                    overlay.style.position = 'fixed';
+                    overlay.style.top = rect.top + 'px';
+                    overlay.style.left = rect.left + 'px';
+                    overlay.style.width = rect.width + 'px';
+                    overlay.style.height = rect.height + 'px';
+                    overlay.style.backgroundColor = 'transparent';
+                    overlay.style.border = '3px solid #FF0000';
+                    overlay.style.boxShadow = '0 0 20px rgba(255, 0, 0, 0.9)';
+                    overlay.style.zIndex = '9999';
+                    overlay.style.pointerEvents = 'none';
+                    overlay.style.borderRadius = '4px';
+                    
+                    document.body.appendChild(overlay);
+                    setTimeout(() => {
+                      overlay.style.transition = 'opacity 0.5s ease-out';
+                      overlay.style.opacity = '0';
+                      setTimeout(() => {
+                        overlay.remove();
+                      }, 500);
+                    }, 1500);
+                  } else {
+                    console.log('[Search] ❌ Fallback also failed');
+                  }
+                }
+                
+                // Clear search
+                searchInput.value = '';
+                resultsContainer.innerHTML = '';
+              });
+            });
+          });
+        });
+      } else {
+        console.warn('[Search] Search input or service not found');
+      }
+
+      Logger.info('Incident Reports page initialization completed');
+
+    } catch (error) {
+      Logger.error('Critical error during incident reports initialization', error.message);
+      console.error('Incident reports init error:', error);
+    }
+  });
+
+  /**
+   * Notification UI is handled by shared-notification-ui.js
+   */
+
+  /**
+   * Filter Info Icon Click Handler - Incident Reports
+   */
+  const filterInfoIcon = document.getElementById('filterInfoIcon');
+  if (filterInfoIcon) {
+    filterInfoIcon.addEventListener('click', () => {
+      const modal = document.createElement('div');
+      modal.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.5); display: flex;
+        justify-content: center; align-items: center; z-index: 10000;
+        animation: fadeIn 0.3s ease;
+      `;
+
+      const modalContent = document.createElement('div');
+      modalContent.style.cssText = `
+        background: white; border-radius: 12px; padding: 30px;
+        max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        animation: slideUp 0.3s ease;
+      `;
+
+      modalContent.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <h2 style="margin: 0; color: #333; font-size: 22px;">
+            <i class="fa-solid fa-clipboard-list" style="color: #B00020; margin-right: 10px;"></i>
+            Incident Reports
+          </h2>
+          <button id="closeModal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">
+            <i class="fa-solid fa-times"></i>
+          </button>
+        </div>
+
+        <div style="color: #666; line-height: 1.8;">
+          <p><strong>This page displays a detailed list of all incidents with advanced filtering and sorting options.</strong></p>
+
+          <div style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; border-left: 4px solid #B00020;">
+            <h3 style="margin: 0 0 10px 0; color: #333;">Filter by Date</h3>
+            <p style="margin: 0;">Select a date range to view incidents reported within that timeframe.</p>
+          </div>
+
+          <div style="margin-top: 15px; padding: 15px; background: #f5f5f5; border-radius: 8px; border-left: 4px solid #B00020;">
+            <h3 style="margin: 0 0 10px 0; color: #333;">Sort Options</h3>
+            <p style="margin: 0;">Organize incidents by:</p>
+            <ul style="margin: 8px 0 0 0; padding-left: 20px;">
+              <li><strong>Timestamp</strong> - Newest or oldest first</li>
+              <li><strong>Severity</strong> - High to Low or Low to High</li>
+              <li><strong>Type</strong> - Alphabetically</li>
+              <li><strong>Status</strong> - By incident state</li>
+            </ul>
+          </div>
+
+          <div style="margin-top: 15px; padding: 15px; background: #f5f5f5; border-radius: 8px; border-left: 4px solid #B00020;">
+            <h3 style="margin: 0 0 10px 0; color: #333;">Incident Table</h3>
+            <p style="margin: 0;">View all incident details including:</p>
+            <ul style="margin: 8px 0 0 0; padding-left: 20px;">
+              <li>Incident ID and Type</li>
+              <li>Severity Level and Status</li>
+              <li>Location and Timestamp</li>
+              <li>Reporter Information</li>
+            </ul>
+          </div>
+
+          <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
+            <p style="margin: 0;"><strong>💡 Tip:</strong> Click on any incident row to view full details, add notes, or update the status.</p>
+          </div>
+        </div>
+
+        <div style="margin-top: 25px; display: flex; justify-content: flex-end; gap: 10px;">
+          <button id="closeModalBtn" style="background: white; border: 2px solid #B00020; color: #B00020; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.2s;">Close</button>
+        </div>
+      `;
+
+      modal.appendChild(modalContent);
+      document.body.appendChild(modal);
+
+      const closeButton = document.getElementById('closeModal');
+      const closeButtonBtn = document.getElementById('closeModalBtn');
+      
+      const closeModal = () => {
+        modal.style.animation = 'fadeOut 0.3s ease';
+        setTimeout(() => modal.remove(), 300);
+      };
+
+      closeButton.addEventListener('click', closeModal);
+      closeButtonBtn.addEventListener('click', closeModal);
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+      });
+
+      const escapeHandler = (e) => {
+        if (e.key === 'Escape') {
+          closeModal();
+          document.removeEventListener('keydown', escapeHandler);
+        }
+      };
+      document.addEventListener('keydown', escapeHandler);
+    });
+  }
+</script>
+
+</body>
+</html>

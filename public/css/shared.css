@@ -1,0 +1,38 @@
+/* Shared variables and base styles used across pages */
+:root{
+  --bg:#e6e6e6;
+  --card:#fff;
+  --accent1:#b90f2e;
+  --accent2:#7a1740;
+  --muted:#666;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:Segoe UI, Roboto, Arial, sans-serif;color:#111}
+body{background:var(--bg)}
+
+/* App layout helpers */
+.app{display:flex;min-height:100vh}
+
+/* Common sidebar and main helpers — pages can override specifics */
+.sidebar{background:linear-gradient(180deg,#fff,#fff);padding:28px 22px;border-right:1px solid rgba(0,0,0,0.04)}
+.main{flex:1;padding:40px 22px}
+.main .container{max-width:1100px;margin:0 auto}
+
+/* Common components */
+.logo{font-weight:800;color:var(--accent2);font-size:22px;margin-bottom:18px}
+.user{display:flex;align-items:center;margin-bottom:18px}
+.avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(90deg,var(--accent1),var(--accent2));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;margin-right:12px}
+.userinfo .name{font-weight:700}
+.userinfo .status{font-size:12px;color:green}
+
+.nav-item{display:block;padding:14px 10px;border-radius:8px;color:#111;margin:8px 0;text-decoration:none}
+.nav-item.active{background:linear-gradient(90deg,var(--accent1),var(--accent2));color:#fff}
+.signout{margin-top:28px;color:var(--accent1);font-weight:700}
+
+/* Utility */
+.hidden{display:none}
+
+/* Responsive small screens */
+@media (max-width:900px){
+  .content{flex-direction:column}
+}

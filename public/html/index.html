@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="../css/style.css">
+  <title>Sentinel Login</title>
+
+  <!-- ICONS -->
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+
+<div class="container">
+
+  <!-- LEFT SECTION -->
+  <div class="logo-section">
+    <img src="../img/Sentinel.png" alt="Sentinel Logo" class="logo-img">
+  </div>
+
+  <!-- RIGHT SECTION -->
+  <div class="login-card">
+      <h2>User Login</h2>
+
+      <form id="loginForm">
+        <div class="input-box">
+          <i class="fa-solid fa-user"></i>
+          <input type="text" id="username" placeholder="Username" required>
+        </div>
+
+        <div class="input-box">
+          <i class="fa-solid fa-lock"></i>
+          <input type="password" id="password" placeholder="Password" required>
+        </div>
+
+        <button type="submit" class="login-btn">LOGIN</button>
+
+        <p id="loginError" class="error-message" style="display: none; color: red;">Invalid username or password.</p>
+      </form>
+
+  <a href="dashboard.html" class="create-link">Go to Dashboard →</a>
+  </div>
+
+</div>
+
+<script src="../js/login.js" defer></script>
+
+<script>
+  document.querySelector('.login-btn').addEventListener('click', function() {
+    const username = document.querySelector('input[placeholder="Username"]').value;
+    const password = document.querySelector('input[placeholder="Password"]').value;
+
+    // Simple validation (replace with actual logic as needed)
+    if (username === 'admin' && password === 'sentinel2025') {
+      window.location.href = 'dashboard.html';
+    } else {
+      alert('Invalid username or password.');
+    }
+  });
+</script>
+
+<script src="../js/sentinel-app.js" defer></script>
+
+</body>
+</html>

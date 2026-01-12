@@ -1,0 +1,358 @@
+/* Analytics-specific styles - Higher specificity to override dashboard.css */
+
+/* Ensure main container doesn't have conflicting flex/grid */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+}
+
+body .main.right-col {
+  display: block;
+  margin-left: 250px;
+  width: calc(100% - 250px);
+  box-sizing: border-box;
+}
+
+.main {
+  flex: 1;
+  padding: 20px;
+  min-height: 100vh;
+}
+
+.menu {
+    list-style: none;
+    padding: 0;
+    margin-top: 30px;
+}
+
+.menu li {
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 17px;
+    cursor: pointer;
+}
+
+/* Make anchors inside menu items fill the li and inherit styles */
+.menu li a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: inherit;
+    text-decoration: none;
+    width: 100%;
+}
+
+.menu li:hover,
+.menu .active {
+    background: linear-gradient(90deg, #a3122b 0%, #7a1846 100%);
+    color: white;
+    border-radius: 10px;
+}
+
+.signout {
+    margin-top: 80px;
+    color: #b3002d;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(90deg, #a3122b 0%, #7a1846 100%);
+  padding: 10px 20px;
+  margin: -20px -20px 12px -20px;
+  border-radius: 0 0 4px 4px;
+  color: white;
+}
+
+.top-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: white;
+}
+
+.top-right p {
+  margin: 0;
+  font-weight: 600;
+}
+
+.top-user {
+  font-size: 32px;
+  color: white;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 30px;
+  padding: 8px 14px;
+  width: 420px;
+}
+
+.search-box input {
+  border: none;
+  outline: none;
+  margin-left: 10px;
+  flex: 1;
+}
+
+.page-header {
+  background: #f4f4f4;
+  padding: 18px 20px;
+  border-radius: 10px;
+  margin-top: 0;
+  margin-bottom: 18px;
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.page-sub {
+  color: #666;
+  margin-top: 6px;
+  margin-bottom: 0;
+}
+
+/* Analytics Grid Layout - Very specific to prevent overrides */
+.main .analytics-grid,
+div.analytics-grid {
+  display: grid !important;
+  grid-template-columns: 1fr 2fr !important;
+  grid-template-rows: minmax(300px, auto) minmax(300px, auto) !important;
+  gap: 20px !important;
+  align-items: stretch !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Prevent flex from dashboard.css */
+.main .analytics-grid {
+  flex-direction: unset !important;
+}
+
+.analytics-grid .trends-container {
+  grid-column: 1 / 2 !important;
+  grid-row: 1 / 2 !important;
+}
+
+.analytics-grid .map-container {
+  grid-column: 2 / 3 !important;
+  grid-row: 1 / 3 !important;
+}
+
+.analytics-grid .tanod-container {
+  grid-column: 1 / 2 !important;
+  grid-row: 2 / 3 !important;
+}
+
+/* Card Styles - Override any dashboard card styles */
+.analytics-grid .card,
+.trends-container .card,
+.map-container .card,
+.tanod-container .card {
+  background: #fff !important;
+  padding: 18px !important;
+  border-radius: 10px !important;
+  border: 2px solid #eee !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.analytics-grid .card h3 {
+  margin-top: 0 !important;
+  margin-bottom: 15px !important;
+  flex-shrink: 0 !important;
+}
+
+.analytics-grid .card canvas {
+  flex: 1 !important;
+  min-height: 250px !important;
+  width: 100% !important;
+}
+
+/* Map canvas sizing */
+.map-container .map-canvas,
+#map.map-canvas {
+  width: 100% !important;
+  height: 650px !important;
+  min-height: unset !important;
+  max-height: 650px !important;
+  border-radius: 6px !important;
+  overflow: hidden !important;
+  flex: 0 0 auto !important;
+  position: relative !important;
+}
+
+/* Ensure map card doesn't grow beyond content */
+.analytics-right .card {
+  height: auto !important;
+  overflow: visible !important;
+  min-height: unset !important;
+  max-height: unset !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Additional map card styling to prevent overlap */
+.analytics-right {
+  overflow: visible !important;
+}
+
+.analytics-right .card h3 {
+  margin-top: 0 !important;
+  margin-bottom: 15px !important;
+  flex-shrink: 0 !important;
+}
+
+.analytics-right .card > #map {
+  height: 650px !important;
+  width: 100% !important;
+  position: relative !important;
+  flex: 0 0 auto !important;
+}
+
+.map-container .map-card {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Status table */
+.tanod-container .status-table,
+.status-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin-top: 12px !important;
+  flex: 1 !important;
+}
+
+.status-table th,
+.status-table td {
+  padding: 12px !important;
+  border: 1px solid #ddd !important;
+  text-align: left !important;
+}
+
+.status-table th {
+  background: #f8f8f8 !important;
+  font-weight: 600 !important;
+}
+
+/* Sidebar styles */
+.sidebar.left-col {
+  width: 225px;
+  background: #fff;
+  padding: 20px;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.logo-box {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.sidebar-logo {
+  width: 180px;
+  display: block;
+  margin: 0 auto 10px auto;
+}
+
+.sidebar-link {
+  color: #a3122b;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.user-box {
+  background: #f5f5f5;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.user-label {
+  font-size: 12px;
+  color: #666;
+  margin: 0 0 10px 0;
+  font-weight: 600;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.user-icon {
+  font-size: 40px;
+  color: #a3122b;
+}
+
+.user-name {
+  font-weight: 600;
+  font-size: 16px;
+  margin: 0;
+  line-height: 1;
+}
+
+.online {
+  font-size: 12px;
+  color: #28a745;
+  margin: 0;
+  line-height: 1;
+}
+
+/* Responsive layout */
+@media (max-width: 1200px) {
+  .main .analytics-grid,
+  div.analytics-grid {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto auto auto !important;
+  }
+  
+  .analytics-grid .trends-container {
+    grid-column: 1 / 2 !important;
+    grid-row: 1 / 2 !important;
+  }
+  
+  .analytics-grid .map-container {
+    grid-column: 1 / 2 !important;
+    grid-row: 2 / 3 !important;
+  }
+  
+  .analytics-grid .tanod-container {
+    grid-column: 1 / 2 !important;
+    grid-row: 3 / 4 !important;
+  }
+  
+  .map-container .map-canvas,
+  #map.map-canvas {
+    height: 400px !important;
+    min-height: 400px !important;
+  }
+}

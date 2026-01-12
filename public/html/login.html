@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="../css/style.css">
+  <title>Sentinel Login</title>
+
+  <!-- ICONS -->
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth.js"></script>
+  
+  <!-- Firebase Web Service -->
+  <script src="../js/firebase-web-service.js"></script>
+  
+  <!-- Firebase Auth Service (after Firebase SDK) -->
+  <script>
+    // Wait a bit to ensure Firebase loads
+    setTimeout(() => {
+      const script = document.createElement('script');
+      script.src = '../js/firebase-auth-service.js';
+      document.head.appendChild(script);
+    }, 500);
+  </script>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- LEFT SECTION -->
+  <div class="logo-section">
+    <img src="../img/Sentinel.png" alt="Sentinel Logo" class="logo-img">
+  </div>
+
+  <!-- RIGHT SECTION -->
+  <div class="login-card">
+      <h2>User Login</h2>
+
+      <div id="loginError" class="error-message" style="display: none; color: #d32f2f; margin-bottom: 15px; padding: 10px; background: #ffebee; border-radius: 4px;"></div>
+
+      <form id="loginForm">
+        <div class="input-box">
+          <i class="fa-solid fa-user"></i>
+          <input type="text" id="loginUsername" placeholder="Username or Email" required>
+        </div>
+
+        <div class="input-box">
+          <i class="fa-solid fa-lock"></i>
+          <input type="password" id="loginPassword" placeholder="Password" required>
+        </div>
+
+        <button type="submit" class="login-btn" id="loginBtn">
+          <span id="loginBtnText">LOGIN</span>
+          <span id="loginBtnSpinner" style="display: none;">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+          </span>
+        </button>
+      </form>
+
+      <div style="margin-top: 15px; text-align: center; color: #999; font-size: 12px;">
+        <p>Demo credentials available at database root</p>
+      </div>
+  </div>
+
+</div>
+
+<script>
+/**
+ * Login Form Handler
+ */
+const loginForm = document.getElementById('loginForm');
+const loginUsername = document.getElementById('loginUsername');
+const loginPassword = document.getElementById('loginPassword');
+const loginBtn = document.getElementById('loginBtn');
+const loginBtnText = document.getElementById('loginBtnText');
+const loginBtnSpinner = document.getElementById('loginBtnSpinner');
+const loginError = document.getElementById('loginError');
+
+// Check if already logged in
+window.addEventListener('load', () => {
+  const session = localStorage.getItem('sentinel_logged_in');
+  if (session === 'true') {
+    console.log('[Login] User already logged in, redirecting to dashboard');
+    window.location.href = 'dashboard.html';
+  }
+});
+
+loginForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const username = loginUsername.value.trim();
+  const password = loginPassword.value;
+
+  if (!username || !password) {
+    showError('Please enter username and password');
+    return;
+  }
+
+  // Disable button and show spinner
+  loginBtn.disabled = true;
+  loginBtnText.style.display = 'none';
+  loginBtnSpinner.style.display = 'inline';
+
+  try {
+    console.log('[Login] Attempting login for:', username);
+    
+    // Wait for auth service to be ready
+    let attempts = 0;
+    while (!window.firebaseAuthService && attempts < 20) {
+      await new Promise(r => setTimeout(r, 100));
+      attempts++;
+    }
+    
+    if (!window.firebaseAuthService) {
+      showError('Authentication service not initialized. Please refresh the page.');
+      resetButton();
+      return;
+    }
+
+    const result = await window.firebaseAuthService.login(username, password);
+    
+    if (result.success) {
+      console.log('[Login] ✅ Login successful:', result.user.username);
+      showError('', false); // Clear any error
+      
+      // Redirect to dashboard
+      setTimeout(() => {
+        window.location.href = 'dashboard.html';
+      }, 500);
+    } else {
+      console.log('[Login] ❌ Login failed:', result.error);
+      showError(result.error || 'Invalid username or password');
+      resetButton();
+    }
+  } catch (error) {
+    console.error('[Login] Error:', error);
+    showError('An error occurred. Please try again.');
+    resetButton();
+  }
+});
+
+function showError(message, show = true) {
+  if (show && message) {
+    loginError.textContent = message;
+    loginError.style.display = 'block';
+  } else {
+    loginError.style.display = 'none';
+  }
+}
+
+function resetButton() {
+  loginBtn.disabled = false;
+  loginBtnText.style.display = 'inline';
+  loginBtnSpinner.style.display = 'none';
+}
+</script>
+
+</body>
+</html>

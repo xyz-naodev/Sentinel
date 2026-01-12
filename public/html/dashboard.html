@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentinel Dashboard</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/dashboard.css">
+    <link rel="stylesheet" href="../css/loading.css">
+    <link rel="stylesheet" href="../css/notification.css">
+    <link rel="stylesheet" href="../css/search.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth.js"></script>
+
+    <!-- Firebase Web Service & Auth -->
+    <script src="../js/firebase-web-service.js"></script>
+    <script src="../js/firebase-auth-service.js"></script>
+    <script src="../js/page-auth-guard.js"></script>
+    <script src="../js/shared-notification-service.js"></script>
+    <script src="../js/shared-notification-ui.js"></script>
+</head>
+<body>
+
+<div class="dashboard-container">
+    <!-- LEFT SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <img src="../img/Dashboard-logo.png" alt="Sentinel Logo" class="sidebar-logo-img">
+        </div>
+
+        <div class="sidebar-user">
+            <div class="user-avatar">
+                <i class="fa-solid fa-user"></i>
+            </div>
+            <div class="user-info">
+                <h4>ADMIN</h4>
+                <p>Online</p>
+            </div>
+        </div>
+
+        <ul class="sidebar-nav">
+            <li>
+                <a href="dashboard.html" class="active">
+                    <i class="fa-solid fa-table-columns"></i> Dashboard
+                </a>
+            </li>
+            <li>
+                <a href="incireport.html">
+                    <i class="fa-solid fa-clipboard-list"></i> Incident Reports
+                    <span class="notification-badge" id="incidentBadge" style="display: none;">0</span>
+                </a>
+            </li>
+            <li>
+                <a href="analytics.html">
+                    <i class="fa-solid fa-chart-simple"></i> Analytics
+                </a>
+            </li>
+            <li>
+                <a href="settings.html">
+                    <i class="fa-solid fa-gear"></i> Settings
+                </a>
+            </li>
+        </ul>
+
+        <div class="sidebar-logout">
+            <button id="logoutBtn" class="btn btn-secondary">
+                <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+            </button>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+        <!-- TOP BAR -->
+        <div class="top-bar">
+            <div class="top-bar-left">
+                <div style="position: relative; width: 100%;">
+                    <input type="text" class="top-bar-search" placeholder="Search incidents...">
+                    <div id="searchResults" style="position: absolute; top: 100%; left: 0; width: 100%; max-width: 400px; z-index: 1001;"></div>
+                </div>
+            </div>
+            <div class="top-bar-right">
+                <div style="position: relative; display: inline-block;">
+                    <i class="top-bar-icon fa-solid fa-bell" id="notificationBell" style="cursor: pointer; font-size: 18px; transition: transform 0.2s;" title="Notifications"></i>
+                    <span id="notificationBadge" style="position: absolute; top: -8px; right: -8px; background: #B00020; color: white; border-radius: 50%; width: 24px; height: 24px; display: none; align-items: center; justify-content: center; font-size: 12px; font-weight: 600;"></span>
+                    
+                    <!-- Notification Panel -->
+                    <div id="notificationPanel" style="position: absolute; top: 40px; right: 0; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); width: 380px; max-height: 500px; display: none; z-index: 1000; flex-direction: column; overflow: hidden; pointer-events: none;">
+                        <div style="padding: 14px 16px; border-bottom: 1px solid #eee; background: #f9f9f9; display: flex; justify-content: space-between; align-items: center;">
+                            <h3 style="margin: 0; font-size: 15px; color: #333; font-weight: 600;">Notifications</h3>
+                            <button id="clearAllNotifications" style="background: none; border: none; color: #999; cursor: pointer; font-size: 13px; padding: 4px 8px; transition: color 0.2s;" title="Clear all">Clear All</button>
+                        </div>
+                        <div id="notificationPanelContent" style="overflow-y: auto; flex: 1;">
+                            <div style="padding: 20px; text-align: center; color: #999;">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <i class="top-bar-icon fa-solid fa-circle-info" id="filterInfoIcon" style="cursor: pointer;"></i>
+                
+                <!-- Export Button Dropdown -->
+                <div style="position: relative; display: inline-block;">
+                    <button id="exportBtn" style="background: white; border: 1px solid #ddd; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 6px; transition: all 0.2s;" title="Export incidents">
+                        <i class="fa-solid fa-download"></i>
+                        <span>Export</span>
+                    </button>
+                    <div id="exportMenu" style="position: absolute; top: 100%; right: 0; background: white; border: 1px solid #ddd; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 150px; display: none; z-index: 1000; margin-top: 5px;">
+                        <button id="exportCSV" style="width: 100%; padding: 12px 16px; text-align: left; border: none; background: none; cursor: pointer; font-size: 13px; transition: background 0.2s; border-bottom: 1px solid #eee;">
+                            <i class="fa-solid fa-table" style="margin-right: 8px;"></i> CSV Export
+                        </button>
+                        <button id="exportPDF" style="width: 100%; padding: 12px 16px; text-align: left; border: none; background: none; cursor: pointer; font-size: 13px; transition: background 0.2s; border-bottom: 1px solid #eee;">
+                            <i class="fa-solid fa-file-pdf" style="margin-right: 8px;"></i> PDF Export
+                        </button>
+                        <button id="exportJSON" style="width: 100%; padding: 12px 16px; text-align: left; border: none; background: none; cursor: pointer; font-size: 13px; transition: background 0.2s;">
+                            <i class="fa-solid fa-code" style="margin-right: 8px;"></i> JSON Export
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="admin-section">
+                    <span>ADMIN</span>
+                    <div class="admin-avatar">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE CONTENT -->
+        <div class="page-content">
+            <div class="page-header">
+                <h1>Dashboard Overview</h1>
+                <p class="page-timestamp">As of <span id="as-of-time">10:59 PM</span> <i class="fa-solid fa-rotate-right"></i></p>
+            </div>
+
+            <!-- Two Column Layout -->
+            <div class="dashboard-layout">
+                <!-- LEFT COLUMN: MAP (70%) -->
+                <div class="dashboard-left">
+                    <!-- FILTER CONTROLS -->
+                    <div class="card" style="padding: 15px;">
+                        <h4 style="margin-top: 0; margin-bottom: 12px;">Filters</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                            <div>
+                                <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Date From</label>
+                                <input type="date" id="filterDateFrom" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Date To</label>
+                                <input type="date" id="filterDateTo" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Severity</label>
+                                <select id="filterSeverity" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                                    <option value="">All Severities</option>
+                                    <option value="CRITICAL">Critical</option>
+                                    <option value="HIGH">High</option>
+                                    <option value="MEDIUM">Medium</option>
+                                    <option value="LOW">Low</option>
+                                    <option value="CLEAR">Clear</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px;">
+                            <div>
+                                <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Status</label>
+                                <select id="filterStatus" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                                    <option value="">All Status</option>
+                                    <option value="new">New</option>
+                                    <option value="acknowledged">Acknowledged</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="resolved">Resolved</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Type</label>
+                                <select id="filterType" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                                    <option value="">All Types</option>
+                                    <option value="MEDICAL_EMERGENCY">Medical Emergency</option>
+                                    <option value="FIRE_EMERGENCY">Fire Emergency</option>
+                                    <option value="ROAD_ACCIDENT">Road Accident</option>
+                                    <option value="STREET_FIGHTS">Street Fights</option>
+                                    <option value="THEFT">Theft</option>
+                                    <option value="SEISMIC_DAMAGE">Seismic Damage</option>
+                                    <option value="FLOOD">Flood</option>
+                                    <option value="BOMB_THREAT">Bomb Threat</option>
+                                </select>
+                            </div>
+                            <div></div>
+                        </div>
+                    </div>
+
+                    <!-- MAP CONTAINER -->
+                    <div class="card">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h3 style="margin: 0;">Interactive Map</h3>
+                            <!-- Layer Toggle Controls -->
+                            <div id="mapLayerControls" style="display: flex; gap: 6px;">
+                                <button id="layerStreet" class="map-layer-btn active" title="Street Map" style="padding: 6px 12px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500;" onclick="console.log('Street clicked'); window.map && window.map.setMapTypeId('roadmap'); updateButtonStates('layerStreet');">
+                                    <i class="fa-solid fa-road"></i> Street
+                                </button>
+                                <button id="layerSatellite" class="map-layer-btn" title="Satellite View" style="padding: 6px 12px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500;" onclick="console.log('Satellite clicked'); window.map && window.map.setMapTypeId('satellite'); updateButtonStates('layerSatellite');">
+                                    <i class="fa-solid fa-satellite"></i> Satellite
+                                </button>
+                                <button id="layerTerrain" class="map-layer-btn" title="Terrain View" style="padding: 6px 12px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500;" onclick="console.log('Terrain clicked'); window.map && window.map.setMapTypeId('terrain'); updateButtonStates('layerTerrain');">
+                                    <i class="fa-solid fa-mountain"></i> Terrain
+                                </button>
+                                <button id="layerHybrid" class="map-layer-btn" title="Hybrid View" style="padding: 6px 12px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500;" onclick="console.log('Hybrid clicked'); window.map && window.map.setMapTypeId('hybrid'); updateButtonStates('layerHybrid');">
+                                    <i class="fa-solid fa-layer-group"></i> Hybrid
+                                </button>
+                            </div>
+                        </div>
+                        <div id="map" class="map-canvas" style="height: 600px; border-radius: 10px; overflow: hidden;"></div>
+                    </div>
+                </div>
+
+                <!-- RIGHT COLUMN: INCIDENT REPORT + ANALYTICS (30%) -->
+                <div class="dashboard-right">
+                    <!-- INCIDENT REPORT BOX -->
+                    <div class="card">
+                        <h3><i class="fa-solid fa-triangle-exclamation"></i> Latest Incident</h3>
+                        <div id="latestIncidentContainer" style="min-height: 220px; border-radius: 8px; padding: 15px; overflow-y: auto;">
+                            <!-- Skeleton loading cards -->
+                            <div class="skeleton skeleton-card">
+                                <div class="skeleton-header"></div>
+                                <div class="skeleton-line"></div>
+                                <div class="skeleton-line" style="width: 80%;"></div>
+                                <div class="skeleton-line" style="width: 70%; margin-top: 15px;"></div>
+                                <div class="skeleton-line" style="width: 60%;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ANALYTICS BOX -->
+                    <div class="card">
+                        <h3><i class="fa-solid fa-chart-column"></i> Events Monitored</h3>
+                        <div id="analyticsContainer" style="padding: 10px 0;">
+                            <p style="margin: 8px 0; font-size: 13px;">
+                                <span style="display: inline-block; width: 10px; height: 10px; background: #B00020; border-radius: 2px; margin-right: 6px;"></span> 
+                                <strong>Critical:</strong> <span id="analyticsCount_CRITICAL" style="color: #B00020; font-weight: 600;">0</span>
+                            </p>
+                            <p style="margin: 8px 0; font-size: 13px;">
+                                <span style="display: inline-block; width: 10px; height: 10px; background: #FF9800; border-radius: 2px; margin-right: 6px;"></span> 
+                                <strong>High:</strong> <span id="analyticsCount_HIGH" style="color: #FF9800; font-weight: 600;">0</span>
+                            </p>
+                            <p style="margin: 8px 0; font-size: 13px;">
+                                <span style="display: inline-block; width: 10px; height: 10px; background: #FFC107; border-radius: 2px; margin-right: 6px;"></span> 
+                                <strong>Medium:</strong> <span id="analyticsCount_MEDIUM" style="color: #FFC107; font-weight: 600;">0</span>
+                            </p>
+                            <p style="margin: 8px 0; font-size: 13px;">
+                                <span style="display: inline-block; width: 10px; height: 10px; background: #4CAF50; border-radius: 2px; margin-right: 6px;"></span> 
+                                <strong>Low:</strong> <span id="analyticsCount_LOW" style="color: #4CAF50; font-weight: 600;">0</span>
+                            </p>
+                            <p style="margin: 8px 0; font-size: 13px;">
+                                <i class="fa-solid fa-flag" style="color: #00AA00; margin-right: 6px;"></i> 
+                                <strong>Clear:</strong> <span id="analyticsCount_CLEAR" style="color: #00AA00; font-weight: 600;">0</span>
+                            </p>
+                            <hr style="margin: 10px 0; border: 1px solid #eee;">
+                            <p style="font-weight: 600; color: #333; margin: 8px 0; font-size: 14px;">Total: <span id="analyticsCount_TOTAL" style="color: #B00020; font-size: 16px;">0</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- INCIDENT STATUS UPDATE MODAL -->
+    <div id="incidentModal" class="incident-modal" style="display: none;">
+        <div class="incident-modal-content">
+            <div class="incident-modal-header">
+                <h2 id="modalIncidentTitle" style="margin: 0;">Incident Details</h2>
+                <button id="modalCloseBtn" class="modal-close-btn" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">×</button>
+            </div>
+            
+            <div class="incident-modal-body" style="max-height: 70vh; overflow-y: auto;">
+                <!-- Incident Info -->
+                <div class="modal-section">
+                    <h3 style="margin-top: 0; border-bottom: 2px solid #B00020; padding-bottom: 10px;">Incident Information</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <div>
+                            <label style="font-weight: 600; color: #666; font-size: 12px;">Incident ID</label>
+                            <p id="modalIncidentId" style="margin: 5px 0; font-family: monospace; font-weight: 600;">-</p>
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; color: #666; font-size: 12px;">Type</label>
+                            <p id="modalIncidentType" style="margin: 5px 0; font-weight: 600;">-</p>
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; color: #666; font-size: 12px;">Severity</label>
+                            <p id="modalIncidentSeverity" style="margin: 5px 0; display: inline-block; padding: 4px 8px; border-radius: 4px; font-weight: 600;">-</p>
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; color: #666; font-size: 12px;">Current Status</label>
+                            <p id="modalIncidentStatus" style="margin: 5px 0; font-weight: 600; text-transform: capitalize;">-</p>
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; color: #666; font-size: 12px;">Reporter</label>
+                            <p id="modalIncidentReporter" style="margin: 5px 0;">-</p>
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; color: #666; font-size: 12px;">Time Reported</label>
+                            <p id="modalIncidentTime" style="margin: 5px 0; color: #999; font-size: 12px;">-</p>
+                        </div>
+                        <div style="grid-column: 1 / -1;">
+                            <label style="font-weight: 600; color: #666; font-size: 12px;">Description</label>
+                            <p id="modalIncidentDescription" style="margin: 5px 0; color: #555;">-</p>
+                        </div>
+                        <div style="grid-column: 1 / -1;">
+                            <label style="font-weight: 600; color: #666; font-size: 12px;">Location</label>
+                            <p id="modalIncidentLocation" style="margin: 5px 0;">-</p>
+                            <div id="modalIncidentMap" style="width: 100%; height: 200px; border: 1px solid #ddd; border-radius: 6px; margin-top: 10px; background: #f5f5f5;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status Update -->
+                <div class="modal-section">
+                    <h3 style="border-bottom: 2px solid #B00020; padding-bottom: 10px;">Update Status</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 15px;">
+                        <button class="status-btn" data-status="new" style="padding: 10px; border: 2px solid #ddd; background: white; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.2s;">
+                            <i class="fa-solid fa-circle-plus"></i> New
+                        </button>
+                        <button class="status-btn" data-status="acknowledged" style="padding: 10px; border: 2px solid #ddd; background: white; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.2s;">
+                            <i class="fa-solid fa-check-circle"></i> Acknowledged
+                        </button>
+                        <button class="status-btn" data-status="in_progress" style="padding: 10px; border: 2px solid #ddd; background: white; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.2s;">
+                            <i class="fa-solid fa-hourglass-half"></i> In Progress
+                        </button>
+                        <button class="status-btn" data-status="resolved" style="padding: 10px; border: 2px solid #ddd; background: white; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.2s;">
+                            <i class="fa-solid fa-check-double"></i> Resolved
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="modal-section">
+                    <h3 style="border-bottom: 2px solid #B00020; padding-bottom: 10px;">Notes & Comments</h3>
+                    
+                    <!-- Display existing notes -->
+                    <div id="modalNotesDisplay" style="margin-bottom: 15px; max-height: 150px; overflow-y: auto;">
+                        <p style="color: #999; text-align: center; padding: 20px;">No notes yet</p>
+                    </div>
+                    
+                    <!-- Add new note -->
+                    <textarea id="modalNotes" placeholder="Add notes about this incident..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: Arial; min-height: 100px; resize: vertical;"></textarea>
+                    <button id="modalAddNoteBtn" style="margin-top: 10px; padding: 8px 16px; background: #B00020; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Add Note</button>
+                </div>
+
+                <!-- Status History -->
+                <div class="modal-section">
+                    <h3 style="border-bottom: 2px solid #B00020; padding-bottom: 10px;">Status History</h3>
+                    <div id="modalHistoryList" style="max-height: 200px; overflow-y: auto;">
+                        <p style="color: #999; text-align: center; padding: 20px;">No history available</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="incident-modal-footer" style="display: flex; gap: 10px; justify-content: flex-end; padding: 15px; border-top: 1px solid #eee;">
+                <button id="modalCancelBtn" style="padding: 10px 20px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; font-weight: 600;">Cancel</button>
+                <button id="modalSaveBtn" style="padding: 10px 20px; background: #B00020; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- UTILITIES AND LOGGING -->
+<script src="../js/utils.js"></script>
+
+<!-- UI ENHANCEMENTS (Skeleton loading, notifications) -->
+<script src="../js/ui-enhancements.js"></script>
+
+<!-- ACCESSIBILITY ENHANCEMENTS (ARIA labels, keyboard nav, color contrast) -->
+<script src="../js/accessibility-enhancements.js"></script>
+
+<!-- NOTIFICATION SYSTEM -->
+<script src="../js/notification-system.js"></script>
+
+<!-- TOAST NOTIFICATIONS SYSTEM -->
+<script src="../js/toast-notifications.js"></script>
+
+<!-- NOTIFICATION MANAGER -->
+<script src="../js/notification-manager.js"></script>
+
+<!-- FIREBASE SCRIPTS -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<!-- Incident ID Generator (must load before Firebase Web Service) -->
+<script src="../js/incident-id-generator.js"></script>
+
+<!-- Search Service -->
+<script src="../js/search-service.js"></script>
+
+<!-- Export Service (CSV, PDF, JSON) -->
+<script src="../js/export-service.js"></script>
+
+<!-- Firebase Web Service Integration -->
+<script src="../js/firebase-web-service.js"></script>
+
+<!-- Initialize Notification Manager with Firebase -->
+<script>
+  // Hook notification manager to Firebase incidents
+  if (typeof firebaseService !== 'undefined' && window.notificationManager) {
+    // Listen to incidents updates
+    firebaseService.onIncidentsChange((incidents) => {
+      if (incidents && incidents.length > 0) {
+        window.notificationManager.checkForNewIncidents(incidents);
+      }
+    });
+    
+    // Initial load
+    if (firebaseService.incidents && firebaseService.incidents.length > 0) {
+      window.notificationManager.checkForNewIncidents(firebaseService.incidents);
+    }
+  }
+</script>
+
+<!-- MarkerClusterer for marker clustering -->
+<script src="https://unpkg.com/@googlemaps/markerclusterer@2.5.0/dist/index.min.js"></script>
+
+<!-- Google Maps API -->
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCk1YpkJBfimFaX5sPjqSPjpCd8iDeA7ro&libraries=visualization&callback=initMap" async defer></script>
+
+<!-- Dashboard Firebase Integration (MUST load before sentinel-app.js) -->
+<script src="../js/dashboard-firebase-integration.js"></script>
+
+<!-- Incident Modal Manager -->
+<script src="../js/incident-modal.js"></script>
+
+<!-- App script with error handling -->
+<script src="../js/sentinel-app.js"></script>
+
+<!-- Clock/Time display -->
+<script src="../js/asof-clock.js"></script>
+
+<!-- Dashboard initialization with error handling -->
+<script>
+  // Wait a bit for scripts to fully load, then initialize
+  setTimeout(() => {
+    console.log('[HTML] Initialization script starting');
+    console.log('[HTML] Firebase service:', typeof firebaseService !== 'undefined' ? 'LOADED' : 'NOT LOADED');
+    console.log('[HTML] Dashboard integration:', typeof dashboardIntegration !== 'undefined' ? 'LOADED' : 'NOT LOADED');
+    console.log('[HTML] initializeDashboard:', typeof initializeDashboard !== 'undefined' ? 'LOADED' : 'NOT LOADED');
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      try {
+        console.log('[HTML] DOMContentLoaded fired');
+        
+        Logger.info('Dashboard initialization started');
+
+        // Show loading spinner
+        const mapContainer = DOMValidator.getElement('.map-container');
+        if (mapContainer) {
+          LoadingSpinner.show(mapContainer, 'Loading dashboard...');
+        }
+
+        // Initialize map with error handling
+        if (typeof initMap === 'function') {
+          try {
+            console.log('[HTML] Calling initMap()');
+            initMap();
+            Logger.info('Map initialized successfully');
+            // Hide loading spinner after successful initialization
+            if (mapContainer) {
+              LoadingSpinner.hide(mapContainer);
+            }
+          } catch (error) {
+            Logger.error('Failed to initialize map', error.message);
+            console.error('[HTML] Map error:', error);
+            if (mapContainer) {
+              LoadingSpinner.hide(mapContainer);
+              ErrorHandler.displayError('Failed to load map. Please refresh the page.', 
+                DOMValidator.getElement('#map'));
+            }
+          }
+        } else {
+          console.log('[HTML] initMap function not found');
+          Logger.warn('initMap function not found');
+          // Hide spinner if initMap not found
+          if (mapContainer) {
+            LoadingSpinner.hide(mapContainer);
+          }
+        }
+
+        // Initialize Firebase Dashboard Integration
+        console.log('[HTML] Checking for initializeDashboard function...');
+        if (typeof initializeDashboard === 'function') {
+          try {
+            console.log('[HTML] initializeDashboard function FOUND, calling it now');
+            initializeDashboard();
+          } catch (error) {
+            console.error('[HTML] Error calling initializeDashboard:', error);
+          }
+        } else {
+          console.warn('[HTML] initializeDashboard function NOT FOUND');
+        }
+
+        // Setup Map Layer Toggle Controls
+        const setupMapLayerControls = () => {
+          console.log('[MapLayers] setupMapLayerControls called');
+          console.log('[MapLayers] window.map exists:', typeof window.map !== 'undefined');
+          
+          if (typeof window.map === 'undefined' || !window.map) {
+            console.warn('[MapLayers] Map not initialized yet, will retry');
+            return false;
+          }
+
+          const layerBtns = document.querySelectorAll('.map-layer-btn');
+          console.log('[MapLayers] Found', layerBtns.length, 'layer buttons');
+          
+          if (layerBtns.length === 0) {
+            console.warn('[MapLayers] Layer buttons not found in DOM');
+            return false;
+          }
+
+          const streetBtn = document.getElementById('layerStreet');
+          const satelliteBtn = document.getElementById('layerSatellite');
+          const terrainBtn = document.getElementById('layerTerrain');
+          const hybridBtn = document.getElementById('layerHybrid');
+
+          console.log('[MapLayers] streetBtn:', !!streetBtn, 'satelliteBtn:', !!satelliteBtn, 'terrainBtn:', !!terrainBtn, 'hybridBtn:', !!hybridBtn);
+
+          if (!streetBtn || !satelliteBtn || !terrainBtn || !hybridBtn) {
+            console.error('[MapLayers] One or more buttons not found');
+            return false;
+          }
+
+          const updateButtonStates = (activeId) => {
+            layerBtns.forEach(btn => {
+              btn.classList.remove('active');
+            });
+            const activeBtn = document.getElementById(activeId);
+            if (activeBtn) {
+              activeBtn.classList.add('active');
+            }
+          };
+
+          // Add click handlers with error handling
+          streetBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            try {
+              window.map.setMapTypeId('roadmap');
+              updateButtonStates('layerStreet');
+              console.log('[MapLayers] Switched to Street view');
+            } catch (err) {
+              console.error('[MapLayers] Error switching to street:', err);
+            }
+          });
+
+          satelliteBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            try {
+              window.map.setMapTypeId('satellite');
+              updateButtonStates('layerSatellite');
+              console.log('[MapLayers] Switched to Satellite view');
+            } catch (err) {
+              console.error('[MapLayers] Error switching to satellite:', err);
+            }
+          });
+
+          terrainBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            try {
+              window.map.setMapTypeId('terrain');
+              updateButtonStates('layerTerrain');
+              console.log('[MapLayers] Switched to Terrain view');
+            } catch (err) {
+              console.error('[MapLayers] Error switching to terrain:', err);
+            }
+          });
+
+          hybridBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            try {
+              window.map.setMapTypeId('hybrid');
+              updateButtonStates('layerHybrid');
+              console.log('[MapLayers] Switched to Hybrid view');
+            } catch (err) {
+              console.error('[MapLayers] Error switching to hybrid:', err);
+            }
+          });
+
+          console.log('[MapLayers] ✅ Layer toggle controls initialized successfully');
+          return true;
+        };
+
+        // Try to setup layer controls with retries
+        let setupAttempt = 0;
+        const trySetupLayerControls = () => {
+          setupAttempt++;
+          console.log('[MapLayers] Setup attempt', setupAttempt);
+          
+          if (!setupMapLayerControls()) {
+            if (setupAttempt < 10) {
+              setTimeout(trySetupLayerControls, 500);
+            } else {
+              console.error('[MapLayers] Failed to setup after 10 attempts');
+            }
+          }
+        };
+        
+        trySetupLayerControls();
+
+        // Setup logout functionality
+        const signoutBtn = document.getElementById('logoutBtn');
+        if (signoutBtn) {
+          signoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            try {
+              Logger.info('User initiated logout');
+              // Clear all authentication data
+              if (typeof StorageHelper !== 'undefined') {
+                StorageHelper.remove('sentinel_logged_in');
+              } else {
+                localStorage.removeItem('sentinel_logged_in');
+                sessionStorage.clear();
+              }
+              // Redirect to login page
+              window.location.href = './login.html';
+            } catch (error) {
+              Logger.error('Logout error', error.message);
+              console.error('Logout failed:', error);
+              // Force redirect to login
+              window.location.href = './login.html';
+            }
+          });
+        } else {
+          Logger.warn('Logout button not found');
+        }
+
+        Logger.info('Dashboard initialization completed');
+
+      } catch (error) {
+        Logger.error('Critical error during dashboard initialization', error.message);
+        console.error('Dashboard init error:', error);
+      }
+    });
+  }, 100);
+</script>
+
+<!-- Search functionality setup - runs after all scripts are loaded -->
+<script>
+  // Wait for DOM and services to be ready
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+      console.log('[SearchSetup] Initializing search');
+      const searchInput = document.querySelector('.top-bar-search');
+      const resultsContainer = document.getElementById('searchResults');
+      
+      console.log('[SearchSetup] searchInput found:', !!searchInput);
+      console.log('[SearchSetup] resultsContainer found:', !!resultsContainer);
+      console.log('[SearchSetup] searchService available:', typeof searchService !== 'undefined');
+      
+      if (!searchInput || !resultsContainer || typeof searchService === 'undefined') {
+        console.error('[SearchSetup] Missing required elements or service');
+        return;
+      }
+      
+      console.log('[SearchSetup] searchService has', searchService.incidents.length, 'incidents');
+      
+      searchInput.addEventListener('keyup', (e) => {
+        const query = e.target.value.trim();
+        console.log('[DashboardSearch] Keyup - query:', query, 'incidents available:', searchService.incidents.length);
+        
+        if (query.length === 0) {
+          resultsContainer.innerHTML = '';
+          return;
+        }
+        
+        if (query.length < 2) {
+          return;
+        }
+        
+        // Search
+        const results = searchService.search(query);
+        console.log('[DashboardSearch] Search returned', results.length, 'results');
+        
+        if (results.length === 0) {
+          resultsContainer.innerHTML = '<div class="search-no-results">No incidents found matching your search.</div>';
+          return;
+        }
+        
+        resultsContainer.innerHTML = searchService.formatResults(results);
+        
+        // Add click handlers
+        resultsContainer.querySelectorAll('.search-result-item').forEach((item, index) => {
+          item.addEventListener('click', () => {
+            const incident = results[index];
+            const latitude = parseFloat(item.getAttribute('data-latitude'));
+            const longitude = parseFloat(item.getAttribute('data-longitude'));
+            
+            if (latitude && longitude && typeof window.map !== 'undefined' && window.map) {
+              console.log('[Search] Jumping to:', latitude, longitude);
+              window.map.setCenter({ lat: latitude, lng: longitude });
+              window.map.setZoom(18);
+              
+              setTimeout(() => {
+                if (typeof dashboardIntegration !== 'undefined' && dashboardIntegration.markers && dashboardIntegration.markers.incidents) {
+                  dashboardIntegration.markers.incidents.forEach(marker => {
+                    const markerPos = marker.getPosition();
+                    if (markerPos && 
+                        Math.abs(markerPos.lat() - latitude) < 0.0001 && 
+                        Math.abs(markerPos.lng() - longitude) < 0.0001) {
+                      console.log('[Search] Found marker, triggering click');
+                      google.maps.event.trigger(marker, 'click');
+                    }
+                  });
+                }
+              }, 300);
+            }
+            
+            searchInput.value = '';
+            resultsContainer.innerHTML = '';
+          });
+        });
+      });
+      
+      console.log('[SearchSetup] Search event listener attached');
+    }, 500);
+  });
+
+  // Update button states
+  function updateButtonStates(activeButtonId) {
+    console.log('[MapLayers] updateButtonStates called with:', activeButtonId);
+    const buttons = document.querySelectorAll('.map-layer-btn');
+    buttons.forEach(btn => {
+      btn.classList.remove('active');
+    });
+    const activeBtn = document.getElementById(activeButtonId);
+    if (activeBtn) {
+      activeBtn.classList.add('active');
+      console.log('[MapLayers] Added active class to:', activeButtonId);
+    }
+  }
+
+  // Export functionality
+  const exportBtn = document.getElementById('exportBtn');
+  const exportMenu = document.getElementById('exportMenu');
+  const exportCSV = document.getElementById('exportCSV');
+  const exportPDF = document.getElementById('exportPDF');
+  const exportJSON = document.getElementById('exportJSON');
+
+  // Toggle export menu
+  if (exportBtn) {
+    exportBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      exportMenu.style.display = exportMenu.style.display === 'none' ? 'block' : 'none';
+    });
+
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!exportBtn.contains(e.target) && !exportMenu.contains(e.target)) {
+        exportMenu.style.display = 'none';
+      }
+    });
+
+    // Add hover effects to menu items
+    [exportCSV, exportPDF, exportJSON].forEach(btn => {
+      if (btn) {
+        btn.addEventListener('mouseover', () => {
+          btn.style.background = '#f5f5f5';
+        });
+        btn.addEventListener('mouseout', () => {
+          btn.style.background = 'white';
+        });
+      }
+    });
+  }
+
+  // CSV Export
+  if (exportCSV) {
+    exportCSV.addEventListener('click', () => {
+      if (dashboardIntegration && dashboardIntegration.incidents.length > 0) {
+        ExportService.exportToCSV(dashboardIntegration.incidents);
+        exportMenu.style.display = 'none';
+        console.log('[Dashboard] CSV export triggered');
+      } else {
+        window.toast?.warning('No Data', 'No incidents to export');
+      }
+    });
+  }
+
+  // PDF Export
+  if (exportPDF) {
+    exportPDF.addEventListener('click', () => {
+      if (dashboardIntegration && dashboardIntegration.incidents.length > 0) {
+        ExportService.exportToPDF(dashboardIntegration.incidents, 'Incident Report - ' + new Date().toLocaleDateString());
+        exportMenu.style.display = 'none';
+        console.log('[Dashboard] PDF export triggered');
+      } else {
+        window.toast?.warning('No Data', 'No incidents to export');
+      }
+    });
+  }
+
+  // JSON Export
+  if (exportJSON) {
+    exportJSON.addEventListener('click', () => {
+      if (dashboardIntegration && dashboardIntegration.incidents.length > 0) {
+        ExportService.exportToJSON(dashboardIntegration.incidents);
+        exportMenu.style.display = 'none';
+        console.log('[Dashboard] JSON export triggered');
+      } else {
+        window.toast?.warning('No Data', 'No incidents to export');
+      }
+    });
+  }
+
+  console.log('[Dashboard] Export functionality initialized');
+
+  /**
+   * Filter Info Icon Handler - Now handled by dashboard-firebase-integration.js
+   */
+  
+  console.log('[Dashboard] Filter info icon handler delegated to dashboard-firebase-integration.js');
+</script>
+
+<!-- Initialize Incident Modal Manager -->
+<script>
+  // Initialize the incident modal manager when the page is ready
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+      if (typeof IncidentModalManager !== 'undefined' && !window.incidentModalManager) {
+        window.incidentModalManager = new IncidentModalManager();
+        console.log('[Dashboard] Incident Modal Manager initialized');
+      }
+    }, 100);
+  });
+</script>
+
+</body>
+</html>

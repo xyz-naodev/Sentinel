@@ -1,0 +1,374 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                      SENTINEL CORE - VISUAL GUIDE                          ║
+║                    Complete Modular Integration System                     ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+
+ARCHITECTURE DIAGRAM
+════════════════════════════════════════════════════════════════════════════
+
+                              YOUR HTML/CSS
+                          (dashboard.html, dashboard.css)
+                                    ↓
+                          (NO CHANGES NEEDED!)
+                                    ↓
+        ┌───────────────────────────────────────────────────────┐
+        │                  Add These Scripts                    │
+        │  (Leaflet, AwesomeMarkers, Sentinel Core modules)    │
+        └───────────────────────────────────────────────────────┘
+                                    ↓
+        ┌───────────────────────────────────────────────────────┐
+        │              SENTINEL CORE INITIALIZATION             │
+        │                 SentinelCore.init()                   │
+        └───────────────────────────────────────────────────────┘
+                    ↓           ↓           ↓           ↓
+        ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+        │ State Init   │ │ Map Init     │ │ Units Init   │ │ Simulation   │
+        └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘
+                    ↓           ↓           ↓           ↓
+        ┌──────────────────────────────────────────────────────┐
+        │           Your Map Shows Live Data!                 │
+        │  • Tanod markers     • Incident pins               │
+        │  • Patrol trails     • Auto-updating               │
+        │  • Real-time data    • Fully interactive           │
+        └──────────────────────────────────────────────────────┘
+
+
+MODULES & DEPENDENCIES
+════════════════════════════════════════════════════════════════════════════
+
+┌─ app-state.js ────────────────────────────────────────────────────────┐
+│  Provides: SentinelState (Global State)                               │
+│  Dependencies: None                                                   │
+│  Key: Central data store for incidents, units, notifications          │
+└────────────────────────────────────────────────────────────────────────┘
+         ↓ (used by)
+┌─ map-manager.js ──────────────────────────────────────────────────────┐
+│  Provides: MapManager (Leaflet Wrapper)                               │
+│  Dependencies: app-state, Leaflet, AwesomeMarkers                     │
+│  Key: Map rendering, marker placement, controls                       │
+└────────────────────────────────────────────────────────────────────────┘
+         ↓ (used by)
+┌─ incident-manager.js ─────────────────────────────────────────────────┐
+│  Provides: IncidentManager (Incident Handling)                        │
+│  Dependencies: app-state, map-manager, ui-utils                       │
+│  Key: Create, filter, simulate, notify incidents                      │
+└────────────────────────────────────────────────────────────────────────┘
+
+┌─ unit-tracker.js ─────────────────────────────────────────────────────┐
+│  Provides: UnitTracker (Unit Management)                              │
+│  Dependencies: app-state, map-manager                                 │
+│  Key: Initialize, track, simulate unit positions                      │
+└────────────────────────────────────────────────────────────────────────┘
+
+┌─ ui-utils.js ─────────────────────────────────────────────────────────┐
+│  Provides: UIUtils (UI Rendering)                                     │
+│  Dependencies: app-state, Bootstrap (optional)                        │
+│  Key: Render lists, notifications, stats                              │
+└────────────────────────────────────────────────────────────────────────┘
+
+┌─ init.js ─────────────────────────────────────────────────────────────┐
+│  Provides: SentinelCore (Master Controller)                           │
+│  Dependencies: All above modules                                      │
+│  Key: Initialize everything, manage system lifecycle                  │
+└────────────────────────────────────────────────────────────────────────┘
+
+
+STATE FLOW DIAGRAM
+════════════════════════════════════════════════════════════════════════════
+
+User Action              Module              State Update          UI Update
+─────────────────────────────────────────────────────────────────────────────
+
+Map Click      →  MapManager.setupClickListener()  →  SentinelState.addIncident()
+                                                             ↓
+                                                   IncidentManager.notifyIncident()
+                                                             ↓
+                                                   UIUtils.showToast()
+                                                   MapManager.renderIncidents()
+
+
+                  UnitTracker.startTracking()  →  SentinelState.updateTanodPosition()
+                           (every 5s)                        ↓
+                                                   MapManager.renderTanodMarkers()
+                                                   (map auto-updates)
+
+
+                  IncidentManager.startSimulation()  →  SentinelState.addIncident()
+                           (every 8s)                        ↓
+                                                   MapManager.addIncidentMarker()
+                                                   UIUtils.showToast()
+
+
+DATA STRUCTURE
+════════════════════════════════════════════════════════════════════════════
+
+SentinelState
+├─ incidents[]                    ← [Incident, Incident, ...]
+│  ├─ id: "INC-001"
+│  ├─ type: "Accident"
+│  ├─ location: "Main St"
+│  ├─ status: "active"
+│  ├─ timestamp: Date
+│  ├─ lat: 14.342
+│  └─ lng: 121.116
+│
+├─ tanods[]                       ← [Unit, Unit, Unit]
+│  ├─ id: "T01"
+│  ├─ name: "Unit 01"
+│  ├─ position: { lat: 14.342, lng: 121.116 }
+│  ├─ status: "on-duty"
+│  └─ lastUpdate: timestamp
+│
+├─ mapMarkers[]                   ← Internal marker tracking
+│  ├─ id: "T01"
+│  └─ marker: Leaflet Marker
+│
+├─ map: L.map                     ← Leaflet map instance
+├─ notificationCount: 3           ← Active incident count
+└─ currentUser: { username: ... } ← Logged-in user
+
+
+API WORKFLOW EXAMPLE
+════════════════════════════════════════════════════════════════════════════
+
+Initialization Flow:
+───────────────────
+
+  SentinelCore.init()
+        ↓
+  ├─ SentinelState initialized (incidents, tanods)
+  │
+  ├─ UnitTracker.initialize()
+  │  └─ Creates 3 units: T01, T02, T03
+  │
+  ├─ MapManager.init('map')
+  │  ├─ Creates Leaflet map
+  │  ├─ Adds tile layer (OpenStreetMap)
+  │  ├─ Creates feature groups
+  │  └─ Sets up click listener
+  │
+  ├─ MapManager.renderTanodMarkers()
+  │  └─ Shows all units on map
+  │
+  ├─ MapManager.renderIncidentMarkers()
+  │  └─ Shows all incidents on map
+  │
+  ├─ UnitTracker.startTracking(5000)
+  │  └─ Units move every 5 seconds
+  │
+  └─ IncidentManager.startSimulation(8000)
+     └─ New incidents every 8 seconds
+
+
+Usage After Initialization:
+──────────────────────────
+
+  Get Data:
+    units = UnitTracker.getAllUnits()
+    incidents = IncidentManager.getRecent(5)
+    stats = IncidentManager.getStats()
+
+  Create Data:
+    IncidentManager.createIncident(data)
+    UnitTracker.updatePosition(id, lat, lng)
+    UnitTracker.updateStatus(id, status)
+
+  Update UI:
+    UIUtils.renderUnitList(units, 'unitsList')
+    UIUtils.renderIncidentList(incidents, 'incidentsList')
+    UIUtils.showSuccess('Title', 'Message')
+
+
+FILE INTEGRATION CHECKLIST
+════════════════════════════════════════════════════════════════════════════
+
+Step 1: Add External Libraries
+  ☐ Leaflet CSS link
+  ☐ Leaflet JS script
+  ☐ AwesomeMarkers script
+
+Step 2: Add Sentinel Core Scripts (IN ORDER!)
+  ☐ app-state.js
+  ☐ map-manager.js
+  ☐ incident-manager.js
+  ☐ unit-tracker.js
+  ☐ ui-utils.js
+  ☐ init.js
+
+Step 3: Initialize
+  ☐ Add SentinelCore.init() in DOMContentLoaded event
+
+Step 4: Test
+  ☐ Map displays
+  ☐ Markers show
+  ☐ Units move
+  ☐ Incidents generate
+  ☐ No console errors
+
+
+TIMELINE & STATISTICS
+════════════════════════════════════════════════════════════════════════════
+
+Creation Date:         November 29, 2025
+Total Code:            1,170+ lines
+Documentation:         1,000+ lines
+Core Modules:          6 files
+Documentation Files:   5 files
+Total Files:           11 files
+
+Code Distribution:
+  ├─ app-state.js:        ~200 lines (18%)
+  ├─ map-manager.js:      ~250 lines (21%)
+  ├─ incident-manager.js: ~200 lines (17%)
+  ├─ unit-tracker.js:     ~220 lines (19%)
+  ├─ ui-utils.js:         ~180 lines (15%)
+  └─ init.js:             ~120 lines (10%)
+
+Documentation Distribution:
+  ├─ README.md:                    ~400 lines
+  ├─ INTEGRATION_GUIDE.js:         ~600 lines
+  ├─ API_REFERENCE.js:             ~150 lines
+  ├─ IMPLEMENTATION_SUMMARY.js:    ~400 lines
+  └─ QUICK_START.js:               ~450 lines
+
+
+MODULE METHODS SUMMARY
+════════════════════════════════════════════════════════════════════════════
+
+app-state.js (10 methods)
+  ✓ addIncident()
+  ✓ getActiveIncidents()
+  ✓ updateIncidentStatus()
+  ✓ initializeTanods()
+  ✓ updateTanodPosition()
+  ✓ updateTanodStatus()
+  ✓ getTanods()
+  ✓ getTanodById()
+  ✓ updateNotificationCount()
+
+map-manager.js (12+ methods)
+  ✓ init()
+  ✓ renderTanodMarkers()
+  ✓ renderIncidentMarkers()
+  ✓ addIncidentMarker()
+  ✓ drawPatrolTrail()
+  ✓ centerMap()
+  ✓ centerOnTanods()
+  ✓ destroy()
+  ✓ isInitialized()
+  ✓ getTanodColor()
+  ✓ setupMapClickListener()
+
+incident-manager.js (10+ methods)
+  ✓ createIncident()
+  ✓ getIncidentsByType()
+  ✓ getIncidentsInArea()
+  ✓ getIncidentsByStatus()
+  ✓ updateStatus()
+  ✓ getRecent()
+  ✓ getStats()
+  ✓ notifyIncident()
+  ✓ startSimulation()
+  ✓ stopSimulation()
+  ✓ isSimulating()
+
+unit-tracker.js (14+ methods)
+  ✓ initialize()
+  ✓ getAllUnits()
+  ✓ getUnit()
+  ✓ updatePosition()
+  ✓ updateStatus()
+  ✓ getStatus()
+  ✓ getPosition()
+  ✓ getUnitsByStatus()
+  ✓ getUnitsInArea()
+  ✓ startTracking()
+  ✓ stopTracking()
+  ✓ isTracking()
+  ✓ getStats()
+  ✓ getDistanceBetweenUnits()
+
+ui-utils.js (10+ methods)
+  ✓ showToast()
+  ✓ showSuccess()
+  ✓ showError()
+  ✓ showWarning()
+  ✓ updateNotificationBadge()
+  ✓ renderUnitList()
+  ✓ renderIncidentList()
+  ✓ renderDashboardStats()
+  ✓ getStatusColor()
+  ✓ formatTime()
+  ✓ formatDate()
+
+SentinelCore (4 methods)
+  ✓ init()
+  ✓ getStatus()
+  ✓ destroy()
+  ✓ startSimulations()
+  ✓ stopSimulations()
+
+
+VISUAL: BEFORE vs AFTER
+════════════════════════════════════════════════════════════════════════════
+
+BEFORE (Your current setup):
+─────────────────────────
+
+dashboard.html
+├─ Map div (empty)
+└─ Right panels (empty)
+
+Result: Static layout
+
+
+AFTER (With Sentinel Core):
+────────────────────────
+
+dashboard.html + Sentinel Core
+├─ Map div ✓ (Live Leaflet map with real-time data)
+│  ├─ Tanod markers (moving)
+│  ├─ Incident markers (pinned)
+│  ├─ Patrol trails (dashed lines)
+│  └─ Interactive controls
+│
+├─ Right panels ✓ (Auto-populated)
+│  ├─ Incident Report (Live data)
+│  └─ Analytics (Live stats)
+│
+└─ Notifications ✓ (Real-time toasts)
+
+Result: Fully interactive, real-time dashboard
+
+
+QUICK REFERENCE
+════════════════════════════════════════════════════════════════════════════
+
+Start using:
+  SentinelCore.init({ mapContainer: 'map', ... })
+
+Get data:
+  UnitTracker.getAllUnits()
+  IncidentManager.getRecent(5)
+  IncidentManager.getStats()
+
+Create data:
+  IncidentManager.createIncident(data)
+  UnitTracker.updatePosition(id, lat, lng)
+
+Render UI:
+  UIUtils.renderUnitList(units, 'unitsList')
+  UIUtils.renderIncidentList(incidents, 'incidentsList')
+
+Show notifications:
+  UIUtils.showSuccess('Title', 'Message')
+  UIUtils.showError('Title', 'Message')
+
+Stop everything:
+  SentinelCore.destroy()
+
+
+═════════════════════════════════════════════════════════════════════════════
+                            READY TO INTEGRATE!
+═════════════════════════════════════════════════════════════════════════════
