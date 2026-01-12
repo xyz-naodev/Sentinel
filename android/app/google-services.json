@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "360867768638",
+    "firebase_url": "https://sentinel-tanod-system-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "sentinel-tanod-system",
+    "storage_bucket": "sentinel-tanod-system.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:360867768638:android:0ee89ffecacda1ee7e246f",
+        "android_client_info": {
+          "package_name": "com.example.flutter_application_1"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDLSDKauEB28xoliaUG_hoIYXotBNfujlk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
